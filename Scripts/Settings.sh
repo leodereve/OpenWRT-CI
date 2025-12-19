@@ -66,3 +66,18 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
 		echo "qualcommax set up nowifi successfully!"
 	fi
 fi
+
+##特别注意，这个可能时对所有都交换了
+# 定位 99-default_network 文件路径
+NETWORK_FILE="./package/base-files/files/etc/board.d/99-default_network"
+if [ -f "$NETWORK_FILE" ]; then
+    echo "正在交换默认网口定义..."
+    
+    # 1. 将原来的 lan 'eth0' 修改为 lan 'eth1' (即 2.5G 口作为局域网)
+    sed -i "s/ucidef_set_interface_lan 'eth0'/ucidef_set_interface_lan 'eth1'/g" $NETWORK_FILE
+    
+    # 2. 将原来的 wan 'eth1' 修改为 wan 'eth0' (即 1G 口作为广域网)
+    sed -i "s/ucidef_set_interface_wan 'eth1'/ucidef_set_interface_wan 'eth0'/g" $NETWORK_FILE
+    
+    echo "交换完成：LAN=eth1, WAN=eth0"
+fi
