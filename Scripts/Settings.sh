@@ -68,37 +68,56 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
 fi
 
 ##特别注意，这个可能时对所有都交换了
-# 定位 99-default_network 文件路径
+# ...（前半部分移除sysupgrade、修改IP、WIFI等保持不變）...
+
+# =========================================================
+# 網口交換邏輯：僅針對雅典娜 (athena) 和 Cudy TR3000 (tr3000)
+# =========================================================
 NETWORK_FILE="./package/base-files/files/etc/board.d/99-default_network"
-if [ -f "$NETWORK_FILE" ]; then
-    echo "正在交换默认网口定义..."
-    
-    # 1. 将原来的 lan 'eth0' 修改为 lan 'eth1' (即 2.5G 口作为局域网)
-    sed -i "s/ucidef_set_interface_lan 'eth0'/ucidef_set_interface_lan 'eth1'/g" $NETWORK_FILE
-    
-    # 2. 将原来的 wan 'eth1' 修改为 wan 'eth0' (即 1G 口作为广域网)
-    sed -i "s/ucidef_set_interface_wan 'eth1'/ucidef_set_interface_wan 'eth0'/g" $NETWORK_FILE
-    
-    echo "交换完成：LAN=eth1, WAN=eth0"
-fi
-
-#防止config generate覆盖交换，修改generate文件：
 CFG_GEN="./package/base-files/files/bin/config_generate"
-if [ -f "$CFG_GEN" ]; then
-    # 交换所有默认生成的 eth0 和 eth1 映射
-    sed -i "s/device='eth0'/device='temp_eth0'/g" $CFG_GEN
-    sed -i "s/device='eth1'/device='eth0'/g" $CFG_GEN
-    sed -i "s/device='temp_eth0'/device='eth1'/g" $CFG_GEN
+
+# 判斷當前編譯機型 (利用你的環境變數 $WRT_CONFIG)
+if [[ "${WRT_CONFIG,,}" == *"athena"* ]] || [[ "${WRT_CONFIG,,}" == *"tr3000"* ]]; then
+    echo "檢測到目標機型 $WRT_CONFIG，執行 2.5G 網口交換為 LAN..."
+    
+    # 修改 99-default_network (UCI Defaults 階段)
+    if [ -f "$NETWORK_FILE" ]; then
+        sed -i "s/ucidef_set_interface_lan 'eth0'/ucidef_set_interface_lan 'eth1'/g" $NETWORK_FILE
+        sed -i "s/ucidef_set_interface_wan 'eth1'/ucidef_set_interface_wan 'eth0'/g" $NETWORK_FILE
+        echo "99-default_network 修改完成"
+    fi
+
+    # 修改 config_generate (生成默認 config 階段)
+    if [ -f "$CFG_GEN" ]; then
+        # 使用暫存替換，確保 eth0 和 eth1 互換不衝突
+        sed -i "s/device='eth0'/device='temp_eth0'/g" $CFG_GEN
+        sed -i "s/device='eth1'/device='eth0'/g" $CFG_GEN
+        sed -i "s/device='temp_eth0'/device='eth1'/g" $CFG_GEN
+        echo "config_generate 修改完成"
+    fi
+else
+    echo "當前機型為 $WRT_CONFIG，跳過網口交換。"
 fi
 
-#更换主题为argon
-# 配置文件修改
-echo "CONFIG_PACKAGE_luci=y" >> ./.config
-echo "CONFIG_LUCI_LANG_zh_Hans=y" >> ./.config
+# =========================================================
+# 主題更換邏輯：更換為 Argon
+# =========================================================
+echo "正在配置主題為 Argon..."
 
-# 更换主题为 argon
+# 1. 確保原始的默認主題替換為 argon (針對 collections)
+find ./feeds/luci/collections/ -type f -name "Makefile" -exec sed -i "s/luci-theme-bootstrap/luci-theme-argon/g" {} +
+find ./feeds/luci/collections/ -type f -name "Makefile" -exec sed -i "s/luci-theme-aurora/luci-theme-argon/g" {} +
+
+# 2. 修改 .config 強制選中 argon 並取消 aurora
+# 先刪除所有與主題相關的現有配置，防止衝突
+sed -i '/CONFIG_PACKAGE_luci-theme-/d' ./.config
+sed -i '/CONFIG_PACKAGE_luci-app-argon-config/d' ./.config
+
 echo "CONFIG_PACKAGE_luci-theme-argon=y" >> ./.config
 echo "CONFIG_PACKAGE_luci-app-argon-config=y" >> ./.config
-# 移除 aurora
-sed -i '/luci-theme-aurora/d' ./.config
+# 明確禁用 aurora
+echo "# CONFIG_PACKAGE_luci-theme-aurora is not set" >> ./.config
+# 明確禁用 bootstrap (如果你不想保留備用)
+echo "# CONFIG_PACKAGE_luci-theme-bootstrap is not set" >> ./.config
 
+echo "主題更換配置完成。"
