@@ -81,3 +81,24 @@ if [ -f "$NETWORK_FILE" ]; then
     
     echo "交换完成：LAN=eth1, WAN=eth0"
 fi
+
+#防止config generate覆盖交换，修改generate文件：
+CFG_GEN="./package/base-files/files/bin/config_generate"
+if [ -f "$CFG_GEN" ]; then
+    # 交换所有默认生成的 eth0 和 eth1 映射
+    sed -i "s/device='eth0'/device='temp_eth0'/g" $CFG_GEN
+    sed -i "s/device='eth1'/device='eth0'/g" $CFG_GEN
+    sed -i "s/device='temp_eth0'/device='eth1'/g" $CFG_GEN
+fi
+
+#更换主题为argon
+# 配置文件修改
+echo "CONFIG_PACKAGE_luci=y" >> ./.config
+echo "CONFIG_LUCI_LANG_zh_Hans=y" >> ./.config
+
+# 更换主题为 argon
+echo "CONFIG_PACKAGE_luci-theme-argon=y" >> ./.config
+echo "CONFIG_PACKAGE_luci-app-argon-config=y" >> ./.config
+# 移除 aurora
+sed -i '/luci-theme-aurora/d' ./.config
+
