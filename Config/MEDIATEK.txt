@@ -1,6 +1,6 @@
 #设备平台
-CONFIG_TARGET_mediatek=y
-CONFIG_TARGET_mediatek_filogic=y
+CONFIG_TARGET_mediatek=n
+CONFIG_TARGET_mediatek_filogic=n
 #设备列表
 CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_abt_asr3000=n
 CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_cetron_ct3003=n
