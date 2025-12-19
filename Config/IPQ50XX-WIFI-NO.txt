@@ -1,6 +1,6 @@
 #设备平台
-CONFIG_TARGET_qualcommax=y
-CONFIG_TARGET_qualcommax_ipq50xx=y
+CONFIG_TARGET_qualcommax=n
+CONFIG_TARGET_qualcommax_ipq50xx=n
 #设备列表
 CONFIG_TARGET_DEVICE_qualcommax_ipq50xx_DEVICE_jdcloud_re-cs-03=y
 #WIFI驱动
