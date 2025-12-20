@@ -57,6 +57,7 @@ UPDATE_PACKAGE "kucat-config" "sirpdboy/luci-app-kucat-config" "master"
 
 # 补充京东云雅典娜专用
 UPDATE_PACKAGE "athena-led" "NONGFAH/luci-app-athena-led" "main"
+UPDATE_PACKAGE "luci-app-pushbot" "zzjk007/luci-app-pushbot" "master"
 UPDATE_PACKAGE "homeproxy" "VIKINGYFY/homeproxy" "main"
 UPDATE_PACKAGE "momo" "nikkinikki-org/OpenWrt-momo" "main"
 UPDATE_PACKAGE "nikki" "nikkinikki-org/OpenWrt-nikki" "main"
