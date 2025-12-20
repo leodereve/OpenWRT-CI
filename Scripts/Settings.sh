@@ -63,12 +63,14 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
 fi
 
 # =========================================================
-# 5. 特定机型网口交换 (2.5G 网口作为 LAN)
+# 5. 特定机型逻辑 (网口交换、定向插件注入)
 # =========================================================
 
-# --- 雅典娜 (jdcloud_re-cs-02): 修改 DTS 标签与 Switch 映射 ---
+# --- 雅典娜 (jdcloud_re-cs-02): DTS网口交换 + PushBot + LED + Samba4 ---
 if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
-    echo "检测到雅典娜，正在修改 DTS 强制交换 2.5G 口为 LAN..."
+    echo "检测到雅典娜，正在执行定制配置..."
+    
+    # 5.1 修改 DTS 强制交换 2.5G 口为 LAN
     DTS_FILE="./target/linux/qualcommax/files/arch/arm64/boot/dts/qcom/ipq6010-re-cs-02.dts"
     if [ -f "$DTS_FILE" ]; then
         sed -i 's/label = "wan";/label = "lan5";/g' $DTS_FILE
@@ -77,9 +79,15 @@ if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
         sed -i 's/switch_wan_bmp = <ESS_PORT1>;/switch_wan_bmp = <ESS_PORT5>;/g' $DTS_FILE
         echo "雅典娜 DTS 修改完成。"
     fi
-    # 雅典娜专属插件注入
+
+    # 5.2 雅典娜专属插件注入
+    echo "正在为雅典娜添加专属插件：PushBot, LED, Samba4..."
     echo "CONFIG_PACKAGE_luci-app-pushbot=y" >> ./.config
     echo "CONFIG_PACKAGE_luci-app-athena-led=y" >> ./.config
+    echo "CONFIG_PACKAGE_luci-app-samba4=y" >> ./.config
+    echo "CONFIG_SAMBA4_SERVER_WSDD2=y" >> ./.config
+    echo "CONFIG_SAMBA4_SERVER_NETBIOS=y" >> ./.config
+    # 补全依赖项
     echo "CONFIG_PACKAGE_curl=y" >> ./.config
     echo "CONFIG_PACKAGE_jsonfilter=y" >> ./.config
 fi
@@ -89,14 +97,14 @@ if [[ "${WRT_CONFIG,,}" == *"cudy_tr3000-v1"* ]]; then
     echo "检测到 Cudy TR3000 v1，正在修改 02_network 交换网口..."
     MTK_NETWORK_FILE="./target/linux/mediatek/filogic/base-files/etc/board.d/02_network"
     if [ -f "$MTK_NETWORK_FILE" ]; then
-        # 将 cudy,tr3000-v1 下方的 eth0 eth1 替换为 eth1 eth0
+        # 将 cudy,tr3000-v1 对应的 eth0 eth1 替换为 eth1 eth0
         sed -i "/cudy,tr3000-v1/,/ucidef_set_interfaces_lan_wan/ s/eth0 eth1/eth1 eth0/" $MTK_NETWORK_FILE
         echo "Cudy TR3000 v1 源码网口交换完成。"
     fi
 fi
 
 # =========================================================
-# 6. 全局主题强制切换为 Argon (清除 Aurora 残留)
+# 6. 全局主题强制切换为 Argon
 # =========================================================
 echo "正在全局配置主题为 Argon..."
 find ./feeds/luci/collections/ -type f -name "Makefile" -exec sed -i "s/luci-theme-bootstrap/luci-theme-argon/g" {} +
@@ -132,4 +140,5 @@ EOF
 # 8. 修复 2025-12-20 ath11k-firmware 哈希校验失败 Bug
 # =========================================================
 find ./package/ -wholename "*/ath11k-firmware/Makefile" -exec sed -i 's/PKG_HASH:=.*/PKG_HASH:=skip/g' {} +
-echo "已跳过 ath11k-firmware 哈希校验。"
+echo "已跳过 ath11k-firmware 哈希校验以避免报错。"
+
