@@ -32,7 +32,8 @@ jobs:
       fail-fast: false
       #max-parallel: 3
       matrix:
-        CONFIG: [MEDIATEK]
+       # CONFIG: [MEDIATEK]
+        CONFIG: [cudy_tr3000-v1]
         SOURCE: [VIKINGYFY/immortalwrt]
         BRANCH: [owrt]
 
