@@ -25,14 +25,16 @@ if [ -d *"homeproxy"* ]; then
 fi
 
 #修改argon主题字体和颜色
+# 修改 argon 主題字體、顏色、背景（改為 Bing 壁紙）
 if [ -d *"luci-theme-argon"* ]; then
-	echo " "
-
-	cd ./luci-theme-argon/
-
-	sed -i "s/primary '.*'/primary '#31a1a1'/; s/'0.2'/'0.5'/; s/'none'/'bing'/; s/'600'/'normal'/" ./luci-app-argon-config/root/etc/config/argon
-
-	cd $PKG_PATH && echo "theme-argon has been fixed!"
+    echo "正在修復 Argon 主題配置..."
+    # 遍歷尋找配置文件，確保路徑正確
+    ARGON_CFG=$(find . -type f -name "argon" | grep "etc/config/argon")
+    if [ -n "$ARGON_CFG" ]; then
+        sed -i "s/primary '.*'/primary '#31a1a1'/; s/'0.2'/'0.5'/; s/'none'/'bing'/; s/'600'/'normal'/" "$ARGON_CFG"
+        echo "theme-argon 配置已更新！"
+    fi
+    cd $PKG_PATH
 fi
 
 #修改qca-nss-drv启动顺序
