@@ -70,8 +70,9 @@ fi
 if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
     echo "检测到雅典娜，正在执行定制配置..."
     
-    # 5.1 修改 DTS 强制交换 2.5G 口为 LAN
-    DTS_FILE="./target/linux/qualcommax/files/arch/arm64/boot/dts/qcom/ipq6010-re-cs-02.dts"
+    # 5.1 修改 DTS 强制交换 2.5G 口为 LAN,
+    #搞出了问题，不再交换
+    DTS_FILE="./target/linux/qualcommax/files/arch/arm64/boot/dts/qcom/ipq6010-re-cs-02xxxx.dts"
     if [ -f "$DTS_FILE" ]; then
         sed -i 's/label = "wan";/label = "lan5";/g' $DTS_FILE
         sed -i 's/label = "lan1";/label = "wan";/g' $DTS_FILE
@@ -95,7 +96,7 @@ fi
 # --- Cudy TR3000 v1: 修改 mediatek 的 02_network 脚本 ---
 if [[ "${WRT_CONFIG,,}" == *"cudy_tr3000-v1"* ]]; then
     echo "检测到 Cudy TR3000 v1，正在修改 02_network 交换网口..."
-    MTK_NETWORK_FILE="./target/linux/mediatek/filogic/base-files/etc/board.d/02_network"
+    MTK_NETWORK_FILE="./target/linux/mediatek/filogic/base-files/etc/board.d/02_networkxxxx"
     if [ -f "$MTK_NETWORK_FILE" ]; then
         # 将 cudy,tr3000-v1 对应的 eth0 eth1 替换为 eth1 eth0
         sed -i "/cudy,tr3000-v1/,/ucidef_set_interfaces_lan_wan/ s/eth0 eth1/eth1 eth0/" $MTK_NETWORK_FILE
