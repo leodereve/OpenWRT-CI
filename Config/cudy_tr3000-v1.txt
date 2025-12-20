@@ -1,0 +1,9 @@
+#设备平台
+CONFIG_TARGET_mediatek=y
+CONFIG_TARGET_mediatek_filogic=y
+#设备列表
+#cudy 标准版
+CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_cudy_tr3000-v1=y
+CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_cudy_tr3000-v1-ubootmod=n
+#诺基亚，暂时不用编译
+CONFIG_TARGET_DEVICE_mediatek_filogic_DEVICE_nokia_ea0326gmp=n
