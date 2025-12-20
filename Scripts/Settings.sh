@@ -83,7 +83,7 @@ CFG_GEN="./package/base-files/files/bin/config_generate"
 # 判斷當前編譯機型 (利用環境變數 $WRT_CONFIG)
 # jdcloud_re-cs-02 = 雅典娜
 # cudy_tr3000-v1 = Cudy TR3000 v1
-if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]] || [[ "${WRT_CONFIG,,}" == *"cudy_tr3000-v1"* ]]; then
+if [[ "${WRT_CONFIG,,}" == *"IPQ60XX-WIFI-YES"* ]] || [[ "${WRT_CONFIG,,}" == *"cudy_tr3000-v1"* ]]; then
     echo "檢測到目標機型 $WRT_CONFIG，執行 2.5G 網口交換為 LAN..."
     
     # 1. 修改 99-default_network (影響首次啟動的邏輯)
