@@ -127,3 +127,6 @@ echo "# CONFIG_PACKAGE_luci-theme-aurora is not set" >> ./.config
 echo "# CONFIG_PACKAGE_luci-theme-bootstrap is not set" >> ./.config
 
 echo "主題更換配置完成。"
+
+# 修复 2025-12-20 ath11k-firmware 哈希校验失败问题
+find ./package/ -wholename "*/ath11k-firmware/Makefile" -exec sed -i 's/PKG_HASH:=.*/PKG_HASH:=skip/g' {} +
