@@ -76,18 +76,24 @@ fi
 NETWORK_FILE="./package/base-files/files/etc/board.d/99-default_network"
 CFG_GEN="./package/base-files/files/bin/config_generate"
 
-# 判斷當前編譯機型 (利用你的環境變數 $WRT_CONFIG)
-if [[ "${WRT_CONFIG,,}" == *"athena"* ]] || [[ "${WRT_CONFIG,,}" == *"tr3000"* ]]; then
+# 定義路徑（確保變數在判斷前已定義）
+NETWORK_FILE="./package/base-files/files/etc/board.d/99-default_network"
+CFG_GEN="./package/base-files/files/bin/config_generate"
+
+# 判斷當前編譯機型 (利用環境變數 $WRT_CONFIG)
+# jdcloud_re-cs-02 = 雅典娜
+# cudy_tr3000-v1 = Cudy TR3000 v1
+if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]] || [[ "${WRT_CONFIG,,}" == *"cudy_tr3000-v1"* ]]; then
     echo "檢測到目標機型 $WRT_CONFIG，執行 2.5G 網口交換為 LAN..."
     
-    # 修改 99-default_network (UCI Defaults 階段)
+    # 1. 修改 99-default_network (影響首次啟動的邏輯)
     if [ -f "$NETWORK_FILE" ]; then
         sed -i "s/ucidef_set_interface_lan 'eth0'/ucidef_set_interface_lan 'eth1'/g" $NETWORK_FILE
         sed -i "s/ucidef_set_interface_wan 'eth1'/ucidef_set_interface_wan 'eth0'/g" $NETWORK_FILE
         echo "99-default_network 修改完成"
     fi
 
-    # 修改 config_generate (生成默認 config 階段)
+    # 2. 修改 config_generate (防止初始化時被二次覆蓋)
     if [ -f "$CFG_GEN" ]; then
         # 使用暫存替換，確保 eth0 和 eth1 互換不衝突
         sed -i "s/device='eth0'/device='temp_eth0'/g" $CFG_GEN
@@ -96,7 +102,7 @@ if [[ "${WRT_CONFIG,,}" == *"athena"* ]] || [[ "${WRT_CONFIG,,}" == *"tr3000"* ]
         echo "config_generate 修改完成"
     fi
 else
-    echo "當前機型為 $WRT_CONFIG，跳過網口交換。"
+    echo "當前機型為 $WRT_CONFIG，不屬於雅典娜或 TR3000，跳過網口交換。"
 fi
 
 # =========================================================
