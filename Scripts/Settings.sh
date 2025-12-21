@@ -61,6 +61,27 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
 fi
 
 # =========================================================
+# 将 usteer 源码修改为 usteer-ng (NilsRo 版)
+# =========================================================
+# 定位 usteer 的 Makefile 路径（通常在 routing feed 中）
+USTEER_MAKEFILE=$(find ./feeds/routing/ -type f -name "Makefile" | grep "usteer/Makefile")
+
+if [ -f "$USTEER_MAKEFILE" ]; then
+    echo "正在将 usteer 源码重定向至 usteer-ng..."
+    
+    # 1. 修改 GitHub 源码仓库地址
+    sed -i 's|github.com|github.com|g' $USTEER_MAKEFILE
+    
+    # 2. 修改版本号为 master 分支（或特定提交的哈希值）
+    sed -i 's/PKG_SOURCE_VERSION:=.*/PKG_SOURCE_VERSION:=master/g' $USTEER_MAKEFILE
+    
+    # 3. 必须跳过哈希校验，因为源码地址变了，原本的哈希值会匹配失败
+    sed -i 's/PKG_MIRROR_HASH:=.*/PKG_MIRROR_HASH:=skip/g' $USTEER_MAKEFILE
+    
+    echo "usteer 源码修改完成。"
+fi
+
+# =========================================================
 # 5. 特定机型逻辑 (插件注入、SQM 剔除、防火墙修改)
 # =========================================================
 
