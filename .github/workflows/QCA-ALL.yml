@@ -33,7 +33,7 @@ jobs:
       #max-parallel: 3
       matrix:
         #CONFIG: [IPQ807X-WIFI-YES,IPQ60XX-WIFI-YES]
-        CONFIG: [jdcloud_re-cs-02]
+        CONFIG: [jdcloud_re-cs-02,jdcloud_re-cs-02,jdcloud_re-cs-02_main,aliyun_ap8220]
         SOURCE: [VIKINGYFY/immortalwrt]
         BRANCH: [main]
 
