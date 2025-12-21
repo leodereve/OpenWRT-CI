@@ -45,8 +45,13 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
     echo "正在执行高通平台 NSS 性能优化配置..."
     echo "CONFIG_FEED_nss_packages=n" >> ./.config
     echo "CONFIG_FEED_sqm_scripts_nss=n" >> ./.config
-    echo "CONFIG_PACKAGE_luci-app-sqm=y" >> ./.config
-    echo "CONFIG_PACKAGE_sqm-scripts-nss=y" >> ./.config
+    
+    # 如果不是特定的 AP 机型，则默认启用 SQM
+    if [[ ! "${WRT_CONFIG,,}" == *"cudy_tr3000-v1"* && ! "${WRT_CONFIG,,}" == *"aliyun_ap8220"* && ! "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
+        echo "CONFIG_PACKAGE_luci-app-sqm=y" >> ./.config
+        echo "CONFIG_PACKAGE_sqm-scripts-nss=y" >> ./.config
+    fi
+
     echo "CONFIG_NSS_FIRMWARE_VERSION_11_4=n" >> ./.config
     if [[ "${WRT_CONFIG,,}" == *"ipq50"* ]]; then
         echo "CONFIG_NSS_FIRMWARE_VERSION_12_2=y" >> ./.config
@@ -56,12 +61,12 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
 fi
 
 # =========================================================
-# 5. 特定机型逻辑 (插件注入与防火墙配置)
+# 5. 特定机型逻辑 (插件注入、SQM 剔除、防火墙修改)
 # =========================================================
 
 # --- 5.1 插件注入 ---
 if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02_main"* ]]; then
-    echo "检测到雅典娜 Main 版，注入 PushBot, LED, Samba4..."
+    echo "机型: 雅典娜 Main, 注入 PushBot, LED, Samba4..."
     echo "CONFIG_PACKAGE_luci-app-pushbot=y" >> ./.config
     echo "CONFIG_PACKAGE_luci-app-athena-led=y" >> ./.config
     echo "CONFIG_PACKAGE_luci-app-samba4=y" >> ./.config
@@ -70,21 +75,29 @@ if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02_main"* ]]; then
     echo "CONFIG_PACKAGE_curl=y" >> ./.config
     echo "CONFIG_PACKAGE_jsonfilter=y" >> ./.config
 elif [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
-    echo "检测到雅典娜标准版，注入 LED, Samba4..."
+    echo "机型: 雅典娜 (标准版), 注入 LED, Samba4..."
     echo "CONFIG_PACKAGE_luci-app-athena-led=y" >> ./.config
     echo "CONFIG_PACKAGE_luci-app-samba4=y" >> ./.config
     echo "CONFIG_SAMBA4_SERVER_WSDD2=y" >> ./.config
     echo "CONFIG_SAMBA4_SERVER_NETBIOS=y" >> ./.config
 fi
 
-# --- 5.2 防火墙 WAN 区域全开 (Dumb AP 适配) ---
+# --- 5.2 剔除 SQM 与 防火墙放行 (针对 Dumb AP 机型) ---
 if [[ "${WRT_CONFIG,,}" == *"cudy_tr3000-v1"* || "${WRT_CONFIG,,}" == *"aliyun_ap8220"* || "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
-    echo "正在为 $WRT_CONFIG 配置防火墙 WAN 区域全开放策略..."
+    echo "正在为 $WRT_CONFIG 执行适配: 移除 SQM 并全开 WAN 防火墙..."
+    
+    # 强制从 .config 中删除 SQM
+    sed -i '/luci-app-sqm/d' ./.config
+    echo "# CONFIG_PACKAGE_luci-app-sqm is not set" >> ./.config
+    sed -i '/sqm-scripts-nss/d' ./.config
+    echo "# CONFIG_PACKAGE_sqm-scripts-nss is not set" >> ./.config
+    
+    # 注入防火墙放行脚本
     mkdir -p ./package/base-files/files/etc/uci-defaults
     cat << 'EOF' > ./package/base-files/files/etc/uci-defaults/90-firewall-wan-accept
-uci set firewall.@zone[1].input='ACCEPT'
-uci set firewall.@zone[1].output='ACCEPT'
-uci set firewall.@zone[1].forward='ACCEPT'
+uci set firewall.@zone.input='ACCEPT'
+uci set firewall.@zone.output='ACCEPT'
+uci set firewall.@zone.forward='ACCEPT'
 uci commit firewall
 EOF
 fi
@@ -92,13 +105,12 @@ fi
 # =========================================================
 # 6. 全局主题强制切换为 Argon
 # =========================================================
-echo "正在全局配置主题为 Argon..."
 find ./feeds/luci/collections/ -type f -name "Makefile" -exec sed -i "s/luci-theme-bootstrap/luci-theme-argon/g" {} +
 sed -i '/CONFIG_PACKAGE_luci-theme-/d' ./.config
 echo "CONFIG_PACKAGE_luci-theme-argon=y" >> ./.config
 
 # =========================================================
-# 7. 强制开启 SSH 并修复配置
+# 7. 强制开启 SSH 并修复
 # =========================================================
 SSH_CONF="./package/base-files/files/etc/config/dropbear"
 if [ -f "$SSH_CONF" ]; then
@@ -108,9 +120,9 @@ if [ -f "$SSH_CONF" ]; then
 fi
 mkdir -p ./package/base-files/files/etc/uci-defaults
 cat << 'EOF' > ./package/base-files/files/etc/uci-defaults/99-ssh-fix
-uci set dropbear.@dropbear[0].PasswordAuth='on'
-uci set dropbear.@dropbear[0].RootPasswordAuth='on'
-uci set dropbear.@dropbear[0].RootLogin='on'
+uci set dropbear.@dropbear.PasswordAuth='on'
+uci set dropbear.@dropbear.RootPasswordAuth='on'
+uci set dropbear.@dropbear.RootLogin='on'
 uci commit dropbear
 /etc/init.d/dropbear restart
 EOF
