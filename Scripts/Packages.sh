@@ -59,7 +59,7 @@ UPDATE_PACKAGE "kucat-config" "sirpdboy/luci-app-kucat-config" "master"
 UPDATE_PACKAGE "athena-led" "NONGFAH/luci-app-athena-led" "main"
 UPDATE_PACKAGE "luci-app-pushbot" "MasterOfStar/luci-app-pushbot" "master"
 # 找到对应行并修改为：
-UPDATE_PACKAGE "luci-app-pushbot" "MasterOfStar/luci-app-pushbot" "master"
+#UPDATE_PACKAGE "luci-app-pushbot" "MasterOfStar/luci-app-pushbot" "master"
 UPDATE_PACKAGE "homeproxy" "VIKINGYFY/homeproxy" "main"
 UPDATE_PACKAGE "momo" "nikkinikki-org/OpenWrt-momo" "main"
 UPDATE_PACKAGE "nikki" "nikkinikki-org/OpenWrt-nikki" "main"
