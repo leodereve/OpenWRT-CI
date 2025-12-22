@@ -34,6 +34,10 @@ echo "CONFIG_PACKAGE_luci=y" >> ./.config
 echo "CONFIG_LUCI_LANG_zh_Hans=y" >> ./.config
 echo "CONFIG_PACKAGE_luci-theme-$WRT_THEME=y" >> ./.config
 
+# 全局启用修复版 usteer (任何机型都会安装)
+echo "CONFIG_PACKAGE_usteer=y" >> ./.config
+echo "CONFIG_PACKAGE_luci-app-usteer=y" >> ./.config
+
 if [ -n "$WRT_PACKAGE" ]; then
     echo -e "$WRT_PACKAGE" >> ./.config
 fi
@@ -46,7 +50,6 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
     echo "CONFIG_FEED_nss_packages=n" >> ./.config
     echo "CONFIG_FEED_sqm_scripts_nss=n" >> ./.config
     
-    # 如果不是特定的 AP 机型，则默认启用 SQM
     if [[ ! "${WRT_CONFIG,,}" == *"cudy_tr3000-v1"* && ! "${WRT_CONFIG,,}" == *"aliyun_ap8220"* && ! "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
         echo "CONFIG_PACKAGE_luci-app-sqm=y" >> ./.config
         echo "CONFIG_PACKAGE_sqm-scripts-nss=y" >> ./.config
@@ -61,33 +64,12 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
 fi
 
 # =========================================================
-# 将 usteer 源码修改为 usteer-ng (NilsRo 版)
-# =========================================================
-# 定位 usteer 的 Makefile 路径（通常在 routing feed 中）
-USTEER_MAKEFILE=$(find ./feeds/routing/ -type f -name "Makefile" | grep "usteer/Makefile")
-
-if [ -f "$USTEER_MAKEFILE" ]; then
-    echo "正在将 usteer 源码重定向至 usteer-ng..."
-    
-    # 1. 修改 GitHub 源码仓库地址
-    sed -i 's|github.com|github.com|g' $USTEER_MAKEFILE
-    
-    # 2. 修改版本号为 master 分支（或特定提交的哈希值）
-    sed -i 's/PKG_SOURCE_VERSION:=.*/PKG_SOURCE_VERSION:=master/g' $USTEER_MAKEFILE
-    
-    # 3. 必须跳过哈希校验，因为源码地址变了，原本的哈希值会匹配失败
-    sed -i 's/PKG_MIRROR_HASH:=.*/PKG_MIRROR_HASH:=skip/g' $USTEER_MAKEFILE
-    
-    echo "usteer 源码修改完成。"
-fi
-
-# =========================================================
 # 5. 特定机型逻辑 (插件注入、SQM 剔除、防火墙修改)
 # =========================================================
 
 # --- 5.1 插件注入 ---
 if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02_main"* ]]; then
-    echo "机型: 雅典娜 Main, 注入 PushBot, LED, Samba4..."
+    echo "机型: 雅典娜 Main, 注入 PushBot, LED, Samba4, Conntrack..."
     echo "CONFIG_PACKAGE_luci-app-pushbot=y" >> ./.config
     echo "CONFIG_PACKAGE_luci-app-athena-led=y" >> ./.config
     echo "CONFIG_PACKAGE_luci-app-samba4=y" >> ./.config
@@ -95,8 +77,10 @@ if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02_main"* ]]; then
     echo "CONFIG_SAMBA4_SERVER_NETBIOS=y" >> ./.config
     echo "CONFIG_PACKAGE_curl=y" >> ./.config
     echo "CONFIG_PACKAGE_jsonfilter=y" >> ./.config
-    # 新增 conntrack-tools 注入，为了防火墙控制上网，生效时间时删除设备长连接。
+    
+    # 注入 conntrack-tools (用于管理 iPad 外网访问)
     echo "CONFIG_PACKAGE_conntrack-tools=y" >> ./.config
+
 elif [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
     echo "机型: 雅典娜 (标准版), 注入 LED, Samba4..."
     echo "CONFIG_PACKAGE_luci-app-athena-led=y" >> ./.config
@@ -109,13 +93,11 @@ fi
 if [[ "${WRT_CONFIG,,}" == *"cudy_tr3000-v1"* || "${WRT_CONFIG,,}" == *"aliyun_ap8220"* || "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
     echo "正在为 $WRT_CONFIG 执行适配: 移除 SQM 并全开 WAN 防火墙..."
     
-    # 强制从 .config 中删除 SQM
     sed -i '/luci-app-sqm/d' ./.config
     echo "# CONFIG_PACKAGE_luci-app-sqm is not set" >> ./.config
     sed -i '/sqm-scripts-nss/d' ./.config
     echo "# CONFIG_PACKAGE_sqm-scripts-nss is not set" >> ./.config
     
-    # 注入防火墙放行脚本
     mkdir -p ./package/base-files/files/etc/uci-defaults
     cat << 'EOF' > ./package/base-files/files/etc/uci-defaults/90-firewall-wan-accept
 uci set firewall.@zone.input='ACCEPT'
@@ -151,6 +133,10 @@ uci commit dropbear
 EOF
 
 # =========================================================
-# 8. 修复 ath11k-firmware 哈希校验
+# 8. 修复哈希校验 (ath11k 与 自定义 usteer)
 # =========================================================
+# 修复 ath11k 固件校验
 find ./package/ -wholename "*/ath11k-firmware/Makefile" -exec sed -i 's/PKG_HASH:=.*/PKG_HASH:=skip/g' {} +
+
+# 修复自定义 usteer 源码校验 (防止编译因源码地址变动而报错)
+find ./package/ -wholename "*/usteer/Makefile" -exec sed -i 's/PKG_MIRROR_HASH:=.*/PKG_MIRROR_HASH:=skip/g' {} +
