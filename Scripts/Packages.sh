@@ -61,7 +61,7 @@ UPDATE_PACKAGE "luci-app-pushbot" "MasterOfStar/luci-app-pushbot" "master"
 # 找到对应行并修改为：
 # 替换为 Domingues 的修复版 usteer (包含 usteer 和 luci-app-usteer)
 # 第5个参数传入 "luci-app-usteer"，确保脚本会自动删除官方 feeds 中的旧版前端和后端
-UPDATE_PACKAGE "usteer" "domingues/usteer" "master" "" "luci-app-usteer"
+UPDATE_PACKAGE "usteer" "leodereve/usteer" "master" "" "luci-app-usteer"
 UPDATE_PACKAGE "homeproxy" "VIKINGYFY/homeproxy" "main"
 UPDATE_PACKAGE "momo" "nikkinikki-org/OpenWrt-momo" "main"
 UPDATE_PACKAGE "nikki" "nikkinikki-org/OpenWrt-nikki" "main"
