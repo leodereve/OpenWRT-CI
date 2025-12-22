@@ -95,6 +95,8 @@ if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02_main"* ]]; then
     echo "CONFIG_SAMBA4_SERVER_NETBIOS=y" >> ./.config
     echo "CONFIG_PACKAGE_curl=y" >> ./.config
     echo "CONFIG_PACKAGE_jsonfilter=y" >> ./.config
+    # 新增 conntrack-tools 注入，为了防火墙控制上网，生效时间时删除设备长连接。
+    echo "CONFIG_PACKAGE_conntrack-tools=y" >> ./.config
 elif [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
     echo "机型: 雅典娜 (标准版), 注入 LED, Samba4..."
     echo "CONFIG_PACKAGE_luci-app-athena-led=y" >> ./.config
