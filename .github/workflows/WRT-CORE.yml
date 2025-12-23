@@ -70,14 +70,16 @@ jobs:
         run: |
           sudo -E apt -yqq purge firefox
           sudo -E apt -yqq update
-          sudo -E apt -yqq full-upgrade
+          # 直接安装所有编译依赖，不再调用远程失效脚本
+          sudo -E apt -yqq install build-essential clang flex bison g++ gawk gcc-multilib g++-multilib \
+            gettext git libncurses-dev libssl-dev python3-distutils rsync unzip zlib1g-dev swig \
+            libpython3-dev command-not-found curl dos2unix python3-netifaces libfuse-dev wget rename time
           sudo -E apt -yqq autoremove --purge
           sudo -E apt -yqq autoclean
           sudo -E apt -yqq clean
-          sudo -E apt -yqq install dos2unix python3-netifaces libfuse-dev
-          sudo bash -c 'bash <(curl -sL build-scripts.immortalwrt.org)'
           sudo -E systemctl daemon-reload
           sudo -E timedatectl set-timezone "Asia/Shanghai"
+
           sudo mkdir -p /mnt/build_wrt
           sudo chown $USER:$USER /mnt/build_wrt
           sudo ln -s /mnt/build_wrt $GITHUB_WORKSPACE/wrt
@@ -85,7 +87,6 @@ jobs:
       - name: Initialization Values
         run: |
           echo "WRT_DATE=$(TZ=UTC-8 date +"%y.%m.%d-%H.%M.%S")" >> $GITHUB_ENV
-          # 此处默认 MARK 之后会被 Package 步骤的 WRT_TAG 覆盖
           echo "WRT_MARK=${GITHUB_REPOSITORY%%/*}" >> $GITHUB_ENV
           echo "WRT_INFO=${WRT_SOURCE%%/*}" >> $GITHUB_ENV
           echo "WRT_TARGET=$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' ./Config/$WRT_CONFIG.txt)" >> $GITHUB_ENV
@@ -116,22 +117,6 @@ jobs:
             ./wrt/.ccache
             ./wrt/staging_dir/host*
             ./wrt/staging_dir/tool*
-
-      - name: Update Caches
-        if: env.WRT_TEST != 'true'
-        run: |
-          if [ -d "./wrt/staging_dir" ]; then
-            find "./wrt/staging_dir" -type d -name "stamp" -not -path "*target*" | while read -r DIR; do
-              find "$DIR" -type f -exec touch {} +
-            done
-            mkdir -p ./wrt/tmp && echo "1" > ./wrt/tmp/.build
-          fi
-          if ${{steps.check-cache.outputs.cache-hit != 'true'}}; then
-            CACHE_LIST=$(gh cache list --key "$WRT_CONFIG-$WRT_INFO" | cut -f 1)
-            for CACHE_KEY in $CACHE_LIST; do
-              gh cache delete $CACHE_KEY
-            done
-          fi
 
       - name: Update Feeds
         run: |
@@ -168,19 +153,10 @@ jobs:
           cd ./wrt/
           make -j$(nproc) || make -j1 V=s
 
-      - name: Machine Information
-        run: |
-          cd ./wrt/
-          echo "======================="
-          lscpu | grep -E "name|Core|Thread"
-          echo "======================="
-          df -h
-
       - name: Package Firmware
         run: |
           cd ./wrt/ && mkdir ./upload/
-          
-          # 核心修改：利用传入的 WRT_PACKAGE (即标签) 重命名文件名
+          # 核心逻辑：使用 WRT_PACKAGE 传入的标签（Main/AP）进行命名
           WRT_TAG="${{ inputs.WRT_PACKAGE }}"
           [[ -z "$WRT_TAG" || "$WRT_TAG" == "null" ]] && WRT_TAG="AP"
 
@@ -194,12 +170,10 @@ jobs:
 
             for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
               EXT=$(basename $FILE | cut -d '.' -f 2-)
-              # 重新定义的命名格式：标签-配置名-日期.扩展名
               NEW_FILE="$WRT_TAG"-"$WRT_CONFIG"-"$WRT_DATE"."$EXT"
               mv -f $FILE ./upload/$NEW_FILE
             done
             find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
-            make clean -j$(nproc)
           fi
 
       - name: Release Firmware
@@ -209,6 +183,5 @@ jobs:
           files: ./wrt/upload/*.*
           body: |
             源码：${{env.WRT_REPO}}
-            提交：${{env.WRT_HASH}}
             配置：${{env.WRT_CONFIG}}
-            内核版本：${{env.WRT_KVER}}
+            内核：${{env.WRT_KVER}}
