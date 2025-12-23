@@ -47,7 +47,6 @@ jobs:
     uses: ./.github/workflows/WRT-CORE.yml
     with:
       WRT_CONFIG: ${{matrix.CONFIG}}
-      # 将标签传递给核心脚本进行重命名
       WRT_PACKAGE: ${{matrix.WRT_TAG}}
       WRT_THEME: argon
       WRT_NAME: OWRT
@@ -55,8 +54,8 @@ jobs:
       WRT_WORD: 12345678
       WRT_IP: 192.168.10.1
       WRT_PW: 无
-      # 核心修复点：添加 https:// 并使用正确的 ${{ }} 语法引用变量
-      WRT_REPO: github.com{{matrix.SOURCE}}.git
-      WRT_BRANCH: ${{matrix.BRANCH}}
-      WRT_SOURCE: ${{matrix.SOURCE}}
-      WRT_TEST: ${{inputs.TEST}}
+      # 核心修复：添加 https:// 前缀并修正 ${{ }} 语法
+      WRT_REPO: github.com{{ matrix.SOURCE }}.git
+      WRT_BRANCH: ${{ matrix.BRANCH }}
+      WRT_SOURCE: ${{ matrix.SOURCE }}
+      WRT_TEST: ${{ inputs.TEST }}
