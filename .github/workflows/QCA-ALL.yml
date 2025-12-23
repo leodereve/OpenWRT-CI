@@ -34,7 +34,7 @@ jobs:
         CONFIG: [jdcloud_re-cs-02, jdcloud_re-cs-02_main, aliyun_ap8220]
         SOURCE: [VIKINGYFY/immortalwrt]
         BRANCH: [main]
-        # 核心修改：增加 include 逻辑来区分文件名标签
+        # 增加 include 逻辑来区分文件名标签
         include:
           - CONFIG: jdcloud_re-cs-02_main
             WRT_TAG: Main
@@ -47,7 +47,7 @@ jobs:
     uses: ./.github/workflows/WRT-CORE.yml
     with:
       WRT_CONFIG: ${{matrix.CONFIG}}
-      # 将矩阵中定义的 WRT_TAG 传递给核心脚本的 WRT_PACKAGE 变量或新增输入
+      # 将标签传递给核心脚本进行重命名
       WRT_PACKAGE: ${{matrix.WRT_TAG}}
       WRT_THEME: argon
       WRT_NAME: OWRT
@@ -55,6 +55,7 @@ jobs:
       WRT_WORD: 12345678
       WRT_IP: 192.168.10.1
       WRT_PW: 无
+      # 修正后的克隆地址
       WRT_REPO: github.com{{matrix.SOURCE}}.git
       WRT_BRANCH: ${{matrix.BRANCH}}
       WRT_SOURCE: ${{matrix.SOURCE}}
