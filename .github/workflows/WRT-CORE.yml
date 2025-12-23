@@ -1,4 +1,4 @@
-#云编译公用核心
+# 云编译公用核心
 name: WRT-CORE
 
 on:
@@ -70,16 +70,15 @@ jobs:
         run: |
           sudo -E apt -yqq purge firefox
           sudo -E apt -yqq update
-          # 直接安装所有编译依赖，不再调用远程失效脚本
+          # 2025年适配：安装核心编译包，移除过时的 python3-distutils
           sudo -E apt -yqq install build-essential clang flex bison g++ gawk gcc-multilib g++-multilib \
-            gettext git libncurses-dev libssl-dev python3-distutils rsync unzip zlib1g-dev swig \
+            gettext git libncurses-dev libssl-dev python3-setuptools rsync unzip zlib1g-dev swig \
             libpython3-dev command-not-found curl dos2unix python3-netifaces libfuse-dev wget rename time
           sudo -E apt -yqq autoremove --purge
           sudo -E apt -yqq autoclean
           sudo -E apt -yqq clean
           sudo -E systemctl daemon-reload
           sudo -E timedatectl set-timezone "Asia/Shanghai"
-
           sudo mkdir -p /mnt/build_wrt
           sudo chown $USER:$USER /mnt/build_wrt
           sudo ln -s /mnt/build_wrt $GITHUB_WORKSPACE/wrt
@@ -90,33 +89,15 @@ jobs:
           echo "WRT_MARK=${GITHUB_REPOSITORY%%/*}" >> $GITHUB_ENV
           echo "WRT_INFO=${WRT_SOURCE%%/*}" >> $GITHUB_ENV
           echo "WRT_TARGET=$(grep -m 1 -oP '^CONFIG_TARGET_\K[\w]+(?=\=y)' ./Config/$WRT_CONFIG.txt)" >> $GITHUB_ENV
-          echo "WRT_KVER=none" >> $GITHUB_ENV
-          echo "WRT_LIST=none" >> $GITHUB_ENV
 
       - name: Clone Code
         run: |
           git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO ./wrt/
           cd ./wrt/ && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
-          PROJECT_MIRRORS_FILE="./scripts/projectsmirrors.json"
-          if [ -f "$PROJECT_MIRRORS_FILE" ]; then
-            sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
-          fi
 
       - name: Check Scripts
         run: |
           find ./ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
-
-      - name: Check Caches
-        id: check-cache
-        if: env.WRT_TEST != 'true'
-        uses: actions/cache@main
-        with:
-          key: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_HASH}}
-          restore-keys: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}
-          path: |
-            ./wrt/.ccache
-            ./wrt/staging_dir/host*
-            ./wrt/staging_dir/tool*
 
       - name: Update Feeds
         run: |
@@ -141,31 +122,22 @@ jobs:
           $GITHUB_WORKSPACE/Scripts/Settings.sh
           make defconfig -j$(nproc) && make clean -j$(nproc)
 
-      - name: Download Packages
-        if: env.WRT_TEST != 'true'
-        run: |
-          cd ./wrt/
-          make download -j$(nproc)
-
       - name: Compile Firmware
         if: env.WRT_TEST != 'true'
         run: |
           cd ./wrt/
+          make download -j$(nproc)
           make -j$(nproc) || make -j1 V=s
 
       - name: Package Firmware
         run: |
           cd ./wrt/ && mkdir ./upload/
-          # 核心逻辑：使用 WRT_PACKAGE 传入的标签（Main/AP）进行命名
+          # 核心逻辑：利用入参 WRT_PACKAGE 中的标签重命名
           WRT_TAG="${{ inputs.WRT_PACKAGE }}"
           [[ -z "$WRT_TAG" || "$WRT_TAG" == "null" ]] && WRT_TAG="AP"
 
-          cp -f ./.config ./upload/Config-"$WRT_CONFIG"-"$WRT_TAG"-"$WRT_DATE".txt
-
           if [[ $WRT_TEST != 'true' ]]; then
             echo "WRT_KVER=$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^kernel - \K[\d\.]+' {} \;)" >> $GITHUB_ENV
-            echo "WRT_LIST=$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^luci-(app|theme)[^ ]*' {} \; | tr '\n' ' ')" >> $GITHUB_ENV
-
             find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
 
             for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
@@ -181,7 +153,3 @@ jobs:
         with:
           tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
           files: ./wrt/upload/*.*
-          body: |
-            源码：${{env.WRT_REPO}}
-            配置：${{env.WRT_CONFIG}}
-            内核：${{env.WRT_KVER}}
