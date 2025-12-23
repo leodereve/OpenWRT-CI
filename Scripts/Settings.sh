@@ -1,24 +1,17 @@
 #!/bin/bash
 
 # =========================================================
-# 0. 强制修正构建标识符 (影响最终生成的 .bin 文件名)
+# 0. 固件标识符定义 (用于 Web UI 显示)
 # =========================================================
 if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02_main"* ]]; then
-    # 针对雅典娜 Main 机型
-    NEW_MARK="Main"
+    WRT_MARK="Main"
 else
-    # 针对其他机型 (如普通雅典娜、cudy、aliyun 等 AP 机型)
-    NEW_MARK="AP"
+    WRT_MARK="AP"
 fi
 
-# 强制将新标签注入编译配置 (影响 OpenWrt 内部打包名)
+# 注入内部编译配置，强制改变固件内版本信息
 echo "CONFIG_IMAGEOPT=y" >> ./.config
-echo "CONFIG_VERSION_DIST=\"$NEW_MARK\"" >> ./.config
-
-# 尝试拦截并修改 GitHub Actions 的环境变量 (影响外部上传脚本名)
-if [ -n "$GITHUB_ENV" ]; then
-    echo "WRT_MARK=$NEW_MARK" >> $GITHUB_ENV
-fi
+echo "CONFIG_VERSION_DIST=\"$WRT_MARK\"" >> ./.config
 
 # =========================================================
 # 1. 基础 UI 与 系统信息修改
@@ -26,8 +19,8 @@ fi
 sed -i "/attendedsysupgrade/d" $(find ./feeds/luci/collections/ -type f -name "Makefile")
 sed -i "s/luci-theme-bootstrap/luci-theme-$WRT_THEME/g" $(find ./feeds/luci/collections/ -type f -name "Makefile")
 sed -i "s/192\.168\.[0-9]*\.[0-9]*/$WRT_IP/g" $(find ./feeds/luci/modules/luci-mod-system/ -type f -name "flash.js")
-# 使用 NEW_MARK 确保 Web 界面显示一致
-sed -i "s/(\(luciversion || ''\))/(\1) + (' \/ $NEW_MARK-$WRT_DATE')/g" $(find ./feeds/luci/modules/luci-mod-status/ -type f -name "10_system.js")
+# Web 界面状态栏显示：Main-日期 或 AP-日期
+sed -i "s/(\(luciversion || ''\))/(\1) + (' \/ $WRT_MARK-$WRT_DATE')/g" $(find ./feeds/luci/modules/luci-mod-status/ -type f -name "10_system.js")
 
 # =========================================================
 # 2. Wi-Fi 默认设置
@@ -59,8 +52,9 @@ echo "CONFIG_PACKAGE_luci-theme-$WRT_THEME=y" >> ./.config
 echo "CONFIG_PACKAGE_usteer=y" >> ./.config
 echo "CONFIG_PACKAGE_luci-app-usteer=y" >> ./.config
 
+# 注入外部变量中的插件，同时过滤掉 Main/AP 标签字符串
 if [ -n "$WRT_PACKAGE" ]; then
-    echo -e "$WRT_PACKAGE" >> ./.config
+    echo -e "$WRT_PACKAGE" | sed 's/\bMain\b//g; s/\bAP\b//g' >> ./.config
 fi
 
 # =========================================================
@@ -71,6 +65,7 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
     echo "CONFIG_FEED_nss_packages=n" >> ./.config
     echo "CONFIG_FEED_sqm_scripts_nss=n" >> ./.config
     
+    # 默认开启 SQM (会在下文针对 Dumb AP 机型剔除)
     if [[ ! "${WRT_CONFIG,,}" == *"cudy_tr3000-v1"* && ! "${WRT_CONFIG,,}" == *"aliyun_ap8220"* && ! "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
         echo "CONFIG_PACKAGE_luci-app-sqm=y" >> ./.config
         echo "CONFIG_PACKAGE_sqm-scripts-nss=y" >> ./.config
@@ -102,9 +97,12 @@ if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02_main"* ]]; then
     echo "CONFIG_PACKAGE_luci-app-sqm=y" >> ./.config
     echo "CONFIG_PACKAGE_sqm-scripts-nss=y" >> ./.config
 elif [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
-    echo "机型: 雅典娜标准版 插件注入..."
+    echo "机型: 雅典娜标准版 (AP) 插件注入 (包含 Samba4)..."
     echo "CONFIG_PACKAGE_luci-app-athena-led=y" >> ./.config
+    # 修正：为标准版也注入 Samba4 及其发现服务
     echo "CONFIG_PACKAGE_luci-app-samba4=y" >> ./.config
+    echo "CONFIG_SAMBA4_SERVER_WSDD2=y" >> ./.config
+    echo "CONFIG_SAMBA4_SERVER_NETBIOS=y" >> ./.config
 fi
 
 # --- 5.2 剔除 SQM 与 全放开 WAN 防火墙 (Dumb AP 机型) ---
@@ -140,8 +138,6 @@ echo "CONFIG_PACKAGE_luci-theme-argon=y" >> ./.config
 # 7. 强制开启 SSH 并修复实例缺失
 # =========================================================
 mkdir -p ./files/etc/config
-mkdir -p ./files/etc/uci-defaults
-
 cat << 'EOF' > ./files/etc/config/dropbear
 config dropbear
 	option PasswordAuth 'on'
@@ -150,21 +146,6 @@ config dropbear
 	option Port '22'
 	option enable '1'
 EOF
-
-cat << 'EOF' > ./files/etc/uci-defaults/99-ssh-fix
-#!/bin/sh
-if ! uci -q get dropbear.@dropbear >/dev/null; then
-    uci add dropbear dropbear
-fi
-uci set dropbear.@dropbear.PasswordAuth='on'
-uci set dropbear.@dropbear.RootPasswordAuth='on'
-uci set dropbear.@dropbear.RootLogin='on'
-uci set dropbear.@dropbear.enable='1'
-uci commit dropbear
-/etc/init.d/dropbear restart
-exit 0
-EOF
-chmod +x ./files/etc/uci-defaults/99-ssh-fix
 
 # =========================================================
 # 8. 修复哈希校验
