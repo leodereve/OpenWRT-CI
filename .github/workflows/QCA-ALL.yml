@@ -34,7 +34,7 @@ jobs:
         CONFIG: [jdcloud_re-cs-02, jdcloud_re-cs-02_main, aliyun_ap8220]
         SOURCE: [VIKINGYFY/immortalwrt]
         BRANCH: [main]
-        # 增加 include 逻辑来区分文件名标签
+        # --- 核心修改：在此处精确缩进添加 include ---
         include:
           - CONFIG: jdcloud_re-cs-02_main
             WRT_TAG: Main
@@ -43,24 +43,20 @@ jobs:
           - CONFIG: aliyun_ap8220
             WRT_TAG: AP
 
-    #调用公用编译核心WRT-CORE.yml
+    # 调用公用编译核心WRT-CORE.yml (必须与 strategy 对齐)
     uses: ./.github/workflows/WRT-CORE.yml
-      with:
-      WRT_CONFIG: ${{ matrix.CONFIG }}
-      # 传递我们新增的标签 (Main 或 AP)
-      WRT_PACKAGE: ${{ matrix.WRT_TAG }}
-      # 保持源文件的正确语法，不要删除 $ 和 https://
-      WRT_REPO: https://github.com/${{ matrix.SOURCE }}.git
-      WRT_BRANCH: ${{ matrix.BRANCH }}
-      WRT_SOURCE: ${{ matrix.SOURCE }}
+    with:
+      WRT_CONFIG: ${{matrix.CONFIG}}
+      # 将矩阵标签传给 WRT_PACKAGE 供重命名使用
+      WRT_PACKAGE: ${{matrix.WRT_TAG}}
       WRT_THEME: argon
       WRT_NAME: OWRT
       WRT_SSID: OWRT
       WRT_WORD: 12345678
       WRT_IP: 192.168.10.1
       WRT_PW: 无
-      WRT_TEST: ${{ inputs.TEST }}
-      WRT_REPO: "github.com{{ matrix.SOURCE }}.git"
-      WRT_BRANCH: ${{ matrix.BRANCH }}
-      WRT_SOURCE: ${{ matrix.SOURCE }}
-      WRT_TEST: ${{ inputs.TEST }}
+      # 保持原始链接写法，不要修改
+      WRT_REPO: https://github.com/${{matrix.SOURCE}}.git
+      WRT_BRANCH: ${{matrix.BRANCH}}
+      WRT_SOURCE: ${{matrix.SOURCE}}
+      WRT_TEST: ${{inputs.TEST}}
