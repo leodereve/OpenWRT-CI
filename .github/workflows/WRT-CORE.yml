@@ -4,42 +4,18 @@ name: WRT-CORE
 on:
   workflow_call:
     inputs:
-      WRT_CONFIG:
-        required: true
-        type: string
-      WRT_THEME:
-        required: true
-        type: string
-      WRT_NAME:
-        required: true
-        type: string
-      WRT_SSID:
-        required: true
-        type: string
-      WRT_WORD:
-        required: true
-        type: string
-      WRT_IP:
-        required: true
-        type: string
-      WRT_PW:
-        required: true
-        type: string
-      WRT_REPO:
-        required: true
-        type: string
-      WRT_BRANCH:
-        required: true
-        type: string
-      WRT_SOURCE:
-        required: true
-        type: string
-      WRT_PACKAGE:
-        required: false
-        type: string
-      WRT_TEST:
-        required: false
-        type: string
+      WRT_CONFIG: {required: true, type: string}
+      WRT_THEME: {required: true, type: string}
+      WRT_NAME: {required: true, type: string}
+      WRT_SSID: {required: true, type: string}
+      WRT_WORD: {required: true, type: string}
+      WRT_IP: {required: true, type: string}
+      WRT_PW: {required: true, type: string}
+      WRT_REPO: {required: true, type: string}
+      WRT_BRANCH: {required: true, type: string}
+      WRT_SOURCE: {required: true, type: string}
+      WRT_PACKAGE: {required: false, type: string}
+      WRT_TEST: {required: false, type: string}
 
 env:
   GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -70,7 +46,7 @@ jobs:
         run: |
           sudo -E apt -yqq purge firefox
           sudo -E apt -yqq update
-          # 2025年适配：安装核心编译包，移除过时的 python3-distutils
+          # 2025年适配方案：手动安装依赖，规避 python3-distutils 缺失错误
           sudo -E apt -yqq install build-essential clang flex bison g++ gawk gcc-multilib g++-multilib \
             gettext git libncurses-dev libssl-dev python3-setuptools rsync unzip zlib1g-dev swig \
             libpython3-dev command-not-found curl dos2unix python3-netifaces libfuse-dev wget rename time
@@ -132,14 +108,12 @@ jobs:
       - name: Package Firmware
         run: |
           cd ./wrt/ && mkdir ./upload/
-          # 核心逻辑：利用入参 WRT_PACKAGE 中的标签重命名
           WRT_TAG="${{ inputs.WRT_PACKAGE }}"
           [[ -z "$WRT_TAG" || "$WRT_TAG" == "null" ]] && WRT_TAG="AP"
 
           if [[ $WRT_TEST != 'true' ]]; then
             echo "WRT_KVER=$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^kernel - \K[\d\.]+' {} \;)" >> $GITHUB_ENV
             find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
-
             for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
               EXT=$(basename $FILE | cut -d '.' -f 2-)
               NEW_FILE="$WRT_TAG"-"$WRT_CONFIG"-"$WRT_DATE"."$EXT"
