@@ -1,19 +1,24 @@
 #!/bin/bash
 
 # =========================================================
-# 0. 自定义固件文件名前缀 (Main-xx.bin / AP-xx.bin)
+# 0. 强制修正构建标识符 (影响最终生成的 .bin 文件名)
 # =========================================================
 if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02_main"* ]]; then
     # 针对雅典娜 Main 机型
-    WRT_MARK="Main"
+    NEW_MARK="Main"
 else
-    # 针对其他机型 (如普通 jdcloud_re-cs-02, cudy_tr3000-v1 等 AP 机型)
-    WRT_MARK="AP"
+    # 针对其他机型 (如普通雅典娜、cudy、aliyun 等 AP 机型)
+    NEW_MARK="AP"
 fi
 
-# 注入到编译配置，强制改变生成文件的 bin 名字前缀
+# 强制将新标签注入编译配置 (影响 OpenWrt 内部打包名)
 echo "CONFIG_IMAGEOPT=y" >> ./.config
-echo "CONFIG_VERSION_DIST=\"$WRT_MARK\"" >> ./.config
+echo "CONFIG_VERSION_DIST=\"$NEW_MARK\"" >> ./.config
+
+# 尝试拦截并修改 GitHub Actions 的环境变量 (影响外部上传脚本名)
+if [ -n "$GITHUB_ENV" ]; then
+    echo "WRT_MARK=$NEW_MARK" >> $GITHUB_ENV
+fi
 
 # =========================================================
 # 1. 基础 UI 与 系统信息修改
@@ -21,8 +26,8 @@ echo "CONFIG_VERSION_DIST=\"$WRT_MARK\"" >> ./.config
 sed -i "/attendedsysupgrade/d" $(find ./feeds/luci/collections/ -type f -name "Makefile")
 sed -i "s/luci-theme-bootstrap/luci-theme-$WRT_THEME/g" $(find ./feeds/luci/collections/ -type f -name "Makefile")
 sed -i "s/192\.168\.[0-9]*\.[0-9]*/$WRT_IP/g" $(find ./feeds/luci/modules/luci-mod-system/ -type f -name "flash.js")
-# 此处 WRT_MARK 已根据上面的逻辑变为 Main 或 AP
-sed -i "s/(\(luciversion || ''\))/(\1) + (' \/ $WRT_MARK-$WRT_DATE')/g" $(find ./feeds/luci/modules/luci-mod-status/ -type f -name "10_system.js")
+# 使用 NEW_MARK 确保 Web 界面显示一致
+sed -i "s/(\(luciversion || ''\))/(\1) + (' \/ $NEW_MARK-$WRT_DATE')/g" $(find ./feeds/luci/modules/luci-mod-status/ -type f -name "10_system.js")
 
 # =========================================================
 # 2. Wi-Fi 默认设置
