@@ -48,11 +48,37 @@ echo "CONFIG_PACKAGE_luci=y" >> ./.config
 echo "CONFIG_LUCI_LANG_zh_Hans=y" >> ./.config
 echo "CONFIG_PACKAGE_luci-theme-$WRT_THEME=y" >> ./.config
 
-# 全局启用 usteer
-echo "CONFIG_PACKAGE_usteer=y" >> ./.config
-echo "CONFIG_PACKAGE_luci-app-usteer=y" >> ./.config
+# =========================================================
+# 核心插件按机型分配 (逻辑修正)
+# =========================================================
+if [[ "${WRT_CONFIG^^}" == *"X86"* ]]; then
+    echo "检测到 X86 环境，执行特定插件配置 (Nikki/MosDNS/WolPlus)..."
+    
+    # 1. 彻底禁用 usteer (清理旧配置防止干扰)
+    sed -i '/CONFIG_PACKAGE_usteer/d' ./.config
+    sed -i '/CONFIG_PACKAGE_luci-app-usteer/d' ./.config
+    echo "# CONFIG_PACKAGE_usteer is not set" >> ./.config
+    echo "# CONFIG_PACKAGE_luci-app-usteer is not set" >> ./.config
+    
+    # 2. 启用核心插件 (清理旧的 wol 勾选，强制选中 wolplus)
+    sed -i '/CONFIG_PACKAGE_luci-app-wol/d' ./.config
+    echo "CONFIG_PACKAGE_luci-app-wolplus=y" >> ./.config
+    echo "# CONFIG_PACKAGE_luci-app-wol is not set" >> ./.config
 
-# 注入外部变量中的插件，同时过滤掉 Main/AP 标签字符串
+    echo "CONFIG_PACKAGE_mosdns=y" >> ./.config
+    echo "CONFIG_PACKAGE_luci-app-mosdns=y" >> ./.config
+    echo "CONFIG_PACKAGE_v2dat=y" >> ./.config
+
+    echo "CONFIG_PACKAGE_nikki=y" >> ./.config
+    echo "CONFIG_PACKAGE_luci-app-nikki=y" >> ./.config
+else
+    # 非 X86 机型保持原有 Usteer 漫游开启
+    echo "非 X86 机型，启用默认漫游组件 (Usteer)..."
+    echo "CONFIG_PACKAGE_usteer=y" >> ./.config
+    echo "CONFIG_PACKAGE_luci-app-usteer=y" >> ./.config
+fi
+
+# 注入外部变量中的插件 (优先级最高，会覆盖前面的设置)
 if [ -n "$WRT_PACKAGE" ]; then
     echo -e "$WRT_PACKAGE" | sed 's/\bMain\b//g; s/\bAP\b//g' >> ./.config
 fi
@@ -65,7 +91,6 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
     echo "CONFIG_FEED_nss_packages=n" >> ./.config
     echo "CONFIG_FEED_sqm_scripts_nss=n" >> ./.config
     
-    # 默认开启 SQM (会在下文针对 Dumb AP 机型剔除)
     if [[ ! "${WRT_CONFIG,,}" == *"cudy_tr3000-v1"* && ! "${WRT_CONFIG,,}" == *"aliyun_ap8220"* && ! "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
         echo "CONFIG_PACKAGE_luci-app-sqm=y" >> ./.config
         echo "CONFIG_PACKAGE_sqm-scripts-nss=y" >> ./.config
@@ -82,8 +107,6 @@ fi
 # =========================================================
 # 5. 特定机型逻辑 (插件注入、Dumb AP 防火墙)
 # =========================================================
-
-# --- 5.1 插件注入 ---
 if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02_main"* ]]; then
     echo "机型: 雅典娜 Main 插件注入..."
     echo "CONFIG_PACKAGE_luci-app-pushbot=y" >> ./.config
@@ -99,13 +122,12 @@ if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02_main"* ]]; then
 elif [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
     echo "机型: 雅典娜标准版 (AP) 插件注入 (包含 Samba4)..."
     echo "CONFIG_PACKAGE_luci-app-athena-led=y" >> ./.config
-    # 修正：为标准版也注入 Samba4 及其发现服务
     echo "CONFIG_PACKAGE_luci-app-samba4=y" >> ./.config
     echo "CONFIG_SAMBA4_SERVER_WSDD2=y" >> ./.config
     echo "CONFIG_SAMBA4_SERVER_NETBIOS=y" >> ./.config
 fi
 
-# --- 5.2 剔除 SQM 与 全放开 WAN 防火墙 (Dumb AP 机型) ---
+# 5.2 针对 Dumb AP 机型移除 SQM 并全开 WAN 防火墙
 if [[ "${WRT_CONFIG,,}" == *"cudy_tr3000-v1"* || "${WRT_CONFIG,,}" == *"aliyun_ap8220"* || ("${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* && "${WRT_CONFIG,,}" != *"_main"*) ]]; then
     echo "正在适配 Dumb AP 机型: 移除 SQM 并全开 WAN 防火墙..."
     sed -i '/luci-app-sqm/d' ./.config
@@ -148,7 +170,7 @@ config dropbear
 EOF
 
 # =========================================================
-# 8. 修复哈希校验
+# 8. 修复哈希校验与部分驱动问题
 # =========================================================
 find ./package/ -wholename "*/ath11k-firmware/Makefile" -exec sed -i 's/PKG_HASH:=.*/PKG_HASH:=skip/g' {} +
 find ./package/ -wholename "*/usteer/Makefile" -exec sed -i 's/PKG_MIRROR_HASH:=.*/PKG_MIRROR_HASH:=skip/g' {} +
