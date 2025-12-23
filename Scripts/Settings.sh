@@ -1,11 +1,27 @@
 #!/bin/bash
 
 # =========================================================
+# 0. 自定义固件文件名前缀 (Main-xx.bin / AP-xx.bin)
+# =========================================================
+if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02_main"* ]]; then
+    # 针对雅典娜 Main 机型
+    WRT_MARK="Main"
+else
+    # 针对其他机型 (如普通 jdcloud_re-cs-02, cudy_tr3000-v1 等 AP 机型)
+    WRT_MARK="AP"
+fi
+
+# 注入到编译配置，强制改变生成文件的 bin 名字前缀
+echo "CONFIG_IMAGEOPT=y" >> ./.config
+echo "CONFIG_VERSION_DIST=\"$WRT_MARK\"" >> ./.config
+
+# =========================================================
 # 1. 基础 UI 与 系统信息修改
 # =========================================================
 sed -i "/attendedsysupgrade/d" $(find ./feeds/luci/collections/ -type f -name "Makefile")
 sed -i "s/luci-theme-bootstrap/luci-theme-$WRT_THEME/g" $(find ./feeds/luci/collections/ -type f -name "Makefile")
 sed -i "s/192\.168\.[0-9]*\.[0-9]*/$WRT_IP/g" $(find ./feeds/luci/modules/luci-mod-system/ -type f -name "flash.js")
+# 此处 WRT_MARK 已根据上面的逻辑变为 Main 或 AP
 sed -i "s/(\(luciversion || ''\))/(\1) + (' \/ $WRT_MARK-$WRT_DATE')/g" $(find ./feeds/luci/modules/luci-mod-status/ -type f -name "10_system.js")
 
 # =========================================================
@@ -47,10 +63,9 @@ fi
 # =========================================================
 if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
     echo "执行高通平台性能优化..."
-     #取消nss相关feed
     echo "CONFIG_FEED_nss_packages=n" >> ./.config
     echo "CONFIG_FEED_sqm_scripts_nss=n" >> ./.config
-    # 默认尝试开启 SQM (会在 5.2 节针对 Dumb AP 机型剔除)
+    
     if [[ ! "${WRT_CONFIG,,}" == *"cudy_tr3000-v1"* && ! "${WRT_CONFIG,,}" == *"aliyun_ap8220"* && ! "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
         echo "CONFIG_PACKAGE_luci-app-sqm=y" >> ./.config
         echo "CONFIG_PACKAGE_sqm-scripts-nss=y" >> ./.config
@@ -88,7 +103,6 @@ elif [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
 fi
 
 # --- 5.2 剔除 SQM 与 全放开 WAN 防火墙 (Dumb AP 机型) ---
-# 注意：这里排除掉雅典娜 Main 版，防止主路由被误删 SQM
 if [[ "${WRT_CONFIG,,}" == *"cudy_tr3000-v1"* || "${WRT_CONFIG,,}" == *"aliyun_ap8220"* || ("${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* && "${WRT_CONFIG,,}" != *"_main"*) ]]; then
     echo "正在适配 Dumb AP 机型: 移除 SQM 并全开 WAN 防火墙..."
     sed -i '/luci-app-sqm/d' ./.config
@@ -123,7 +137,6 @@ echo "CONFIG_PACKAGE_luci-theme-argon=y" >> ./.config
 mkdir -p ./files/etc/config
 mkdir -p ./files/etc/uci-defaults
 
-# 预置完整配置文件
 cat << 'EOF' > ./files/etc/config/dropbear
 config dropbear
 	option PasswordAuth 'on'
@@ -133,7 +146,6 @@ config dropbear
 	option enable '1'
 EOF
 
-# 自动修复脚本
 cat << 'EOF' > ./files/etc/uci-defaults/99-ssh-fix
 #!/bin/sh
 if ! uci -q get dropbear.@dropbear >/dev/null; then
