@@ -27,8 +27,8 @@ CONFIG_PACKAGE_luci-app-mosdns=y
 CONFIG_PACKAGE_mosdns=y
 
 # --- 移除/禁用 Usteer (无 WiFi 环境不需要) ---
-# CONFIG_PACKAGE_luci-app-usteer is not set
-# CONFIG_PACKAGE_usteer is not set
+CONFIG_PACKAGE_luci-app-usteer=n
+CONFIG_PACKAGE_usteer=n
 
 # --- 精简：移除所有物理硬件驱动 (Docker 环境不需要) ---
 # 移除磁盘工具
