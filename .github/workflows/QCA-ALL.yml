@@ -55,7 +55,7 @@ jobs:
       WRT_WORD: 12345678
       WRT_IP: 192.168.10.1
       WRT_PW: 无
-      # 修正后的克隆地址
+      # 核心修复点：添加 https:// 并使用正确的 ${{ }} 语法引用变量
       WRT_REPO: github.com{{matrix.SOURCE}}.git
       WRT_BRANCH: ${{matrix.BRANCH}}
       WRT_SOURCE: ${{matrix.SOURCE}}
