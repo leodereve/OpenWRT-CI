@@ -30,37 +30,32 @@ jobs:
     name: ${{matrix.CONFIG}}
     strategy:
       fail-fast: false
-      #max-parallel: 3
       matrix:
-        #CONFIG: [IPQ807X-WIFI-YES,IPQ60XX-WIFI-YES]
-        CONFIG: [jdcloud_re-cs-02,jdcloud_re-cs-02_main,aliyun_ap8220]
+        CONFIG: [jdcloud_re-cs-02, jdcloud_re-cs-02_main, aliyun_ap8220]
         SOURCE: [VIKINGYFY/immortalwrt]
         BRANCH: [main]
+        # 核心修改：增加 include 逻辑来区分文件名标签
+        include:
+          - CONFIG: jdcloud_re-cs-02_main
+            WRT_TAG: Main
+          - CONFIG: jdcloud_re-cs-02
+            WRT_TAG: AP
+          - CONFIG: aliyun_ap8220
+            WRT_TAG: AP
 
     #调用公用编译核心WRT-CORE.yml
     uses: ./.github/workflows/WRT-CORE.yml
     with:
-      #编译配置
       WRT_CONFIG: ${{matrix.CONFIG}}
-      #默认主题
+      # 将矩阵中定义的 WRT_TAG 传递给核心脚本的 WRT_PACKAGE 变量或新增输入
+      WRT_PACKAGE: ${{matrix.WRT_TAG}}
       WRT_THEME: argon
-      #默认主机名
       WRT_NAME: OWRT
-      #默认WIFI名称
       WRT_SSID: OWRT
-      #默认WIFI密码
       WRT_WORD: 12345678
-      #默认地址
       WRT_IP: 192.168.10.1
-      #默认密码，仅作提示，修改无用
       WRT_PW: 无
-      #源码链接
-      WRT_REPO: https://github.com/${{matrix.SOURCE}}.git
-      #源码分支
+      WRT_REPO: github.com{{matrix.SOURCE}}.git
       WRT_BRANCH: ${{matrix.BRANCH}}
-      #源码名称
       WRT_SOURCE: ${{matrix.SOURCE}}
-      #插件调整
-      WRT_PACKAGE: ${{inputs.PACKAGE}}
-      #仅输出配置文件
       WRT_TEST: ${{inputs.TEST}}
