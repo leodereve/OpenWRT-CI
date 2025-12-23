@@ -1,5 +1,5 @@
 #CI项目
-name: AP8220
+name: X86
 
 #CI计划
 on:
@@ -33,7 +33,7 @@ jobs:
       #max-parallel: 3
       matrix:
         #CONFIG: [IPQ807X-WIFI-YES,IPQ60XX-WIFI-YES]
-        CONFIG: [AP8220]
+        CONFIG: [x86]
         SOURCE: [VIKINGYFY/immortalwrt]
         BRANCH: [main]
 
