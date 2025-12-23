@@ -31,7 +31,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        CONFIG: [jdcloud_re-cs-02, jdcloud_re-cs-02_main]
+        CONFIG: [jdcloud_re-cs-02, jdcloud_re-cs-02_main, aliyun_ap8220]
         SOURCE: [VIKINGYFY/immortalwrt]
         BRANCH: [main]
         # --- 核心修改：在此处精确缩进添加 include ---
