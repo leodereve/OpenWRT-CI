@@ -119,6 +119,12 @@ if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02_main"* ]]; then
     echo "CONFIG_PACKAGE_conntrack-tools=y" >> ./.config
     echo "CONFIG_PACKAGE_luci-app-sqm=y" >> ./.config
     echo "CONFIG_PACKAGE_sqm-scripts-nss=y" >> ./.config
+	# 强制加入连接跟踪工具及其依赖
+	echo "CONFIG_PACKAGE_conntrack=y" >> ./.config
+	echo "CONFIG_PACKAGE_conntrack-tools=y" >> ./.config
+	echo "CONFIG_PACKAGE_kmod-nf-conntrack=y" >> ./.config
+	echo "CONFIG_PACKAGE_kmod-nf-conntrack-netlink=y" >> ./.config
+
 elif [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
     echo "机型: 雅典娜标准版 (AP) 插件注入 (包含 Samba4)..."
     echo "CONFIG_PACKAGE_luci-app-athena-led=y" >> ./.config
