@@ -45,17 +45,22 @@ jobs:
 
     #调用公用编译核心WRT-CORE.yml
     uses: ./.github/workflows/WRT-CORE.yml
-    with:
-      WRT_CONFIG: ${{matrix.CONFIG}}
-      WRT_PACKAGE: ${{matrix.WRT_TAG}}
+      with:
+      WRT_CONFIG: ${{ matrix.CONFIG }}
+      # 传递我们新增的标签 (Main 或 AP)
+      WRT_PACKAGE: ${{ matrix.WRT_TAG }}
+      # 保持源文件的正确语法，不要删除 $ 和 https://
+      WRT_REPO: https://github.com/${{ matrix.SOURCE }}.git
+      WRT_BRANCH: ${{ matrix.BRANCH }}
+      WRT_SOURCE: ${{ matrix.SOURCE }}
       WRT_THEME: argon
       WRT_NAME: OWRT
       WRT_SSID: OWRT
       WRT_WORD: 12345678
       WRT_IP: 192.168.10.1
       WRT_PW: 无
-      # 核心修复：添加 https:// 前缀并修正 ${{ }} 语法
-      WRT_REPO: github.com{{ matrix.SOURCE }}.git
+      WRT_TEST: ${{ inputs.TEST }}
+      WRT_REPO: "github.com{{ matrix.SOURCE }}.git"
       WRT_BRANCH: ${{ matrix.BRANCH }}
       WRT_SOURCE: ${{ matrix.SOURCE }}
       WRT_TEST: ${{ inputs.TEST }}
