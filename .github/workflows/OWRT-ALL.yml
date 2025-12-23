@@ -32,16 +32,22 @@ jobs:
       fail-fast: false
       #max-parallel: 3
       matrix:
-       # CONFIG: [MEDIATEK]
         CONFIG: [cudy_tr3000-v1]
         SOURCE: [VIKINGYFY/immortalwrt]
         BRANCH: [owrt]
+        # 核心修改：通过 include 为 cudy_tr3000-v1 绑定 AP 标签
+        include:
+          - CONFIG: cudy_tr3000-v1
+            WRT_TAG: AP
 
     #调用公用编译核心WRT-CORE.yml
     uses: ./.github/workflows/WRT-CORE.yml
     with:
       #编译配置
       WRT_CONFIG: ${{matrix.CONFIG}}
+      # 核心修改：将矩阵中的 WRT_TAG 传递给 WRT_PACKAGE 变量
+      # 这样 WRT-CORE.yml 就能接收到 "AP" 并将其用于固件重命名
+      WRT_PACKAGE: ${{matrix.WRT_TAG}}
       #默认主题
       WRT_THEME: argon
       #默认主机名
@@ -60,7 +66,5 @@ jobs:
       WRT_BRANCH: ${{matrix.BRANCH}}
       #源码名称
       WRT_SOURCE: ${{matrix.SOURCE}}
-      #插件调整
-      WRT_PACKAGE: ${{inputs.PACKAGE}}
       #仅输出配置文件
       WRT_TEST: ${{inputs.TEST}}
