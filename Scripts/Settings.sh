@@ -116,6 +116,8 @@ if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
         echo "CONFIG_PACKAGE_luci-app-sqm=y" >> ./.config
         echo "CONFIG_PACKAGE_sqm-scripts-nss=y" >> ./.config
         echo "CONFIG_PACKAGE_luci-app-pushbot=y" >> ./.config
+		echo "CONFIG_PACKAGE_conntrack-tools=y" >> ./.config
+        echo "CONFIG_PACKAGE_conntrack=y" >> ./.config
     fi
 fi
 
