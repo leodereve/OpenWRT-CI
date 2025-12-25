@@ -48,32 +48,48 @@ echo "CONFIG_PACKAGE_luci=y" >> ./.config
 echo "CONFIG_LUCI_LANG_zh_Hans=y" >> ./.config
 
 # =========================================================
-# 4. 插件分配逻辑
+# 4. 插件分配与全平台 Mesh 漫游锁定
 # =========================================================
+# [通用] 强制所有平台锁定 wpad-mesh-openssl 以支持 802.11k/v/r
+sed -i '/CONFIG_PACKAGE_wpad/d' ./.config
+sed -i '/CONFIG_PACKAGE_hostapd/d' ./.config
+echo "CONFIG_PACKAGE_wpad-mesh-openssl=y" >> ./.config
+
 if [[ "${WRT_CONFIG^^}" == *"X86"* ]]; then
+    echo "执行 X86 专项优化 (旁路由模式)..."
+    # 1. 移除无线漫游插件（x86 旁路由不需要）
     sed -i '/CONFIG_PACKAGE_luci-app-usteer/d' ./.config
     echo "# CONFIG_PACKAGE_luci-app-usteer is not set" >> ./.config
+    
+    # 2. 移除 LED 设置菜单 (Docker 环境无物理 LED，防止报错)
+    sed -i '/CONFIG_PACKAGE_luci-app-ledtrig-rssi/d' ./.config
+    sed -i '/CONFIG_PACKAGE_luci-app-ledtrig-usbdev/d' ./.config
+    echo "# CONFIG_PACKAGE_luci-app-led-control is not set" >> ./.config
+    
+    # 3. 核心插件分配
     sed -i '/CONFIG_PACKAGE_luci-app-wol/d' ./.config
     echo "CONFIG_PACKAGE_luci-app-wolplus=y" >> ./.config
     echo "CONFIG_PACKAGE_mosdns=y" >> ./.config
     echo "CONFIG_PACKAGE_luci-app-mosdns=y" >> ./.config
     echo "CONFIG_PACKAGE_luci-app-nikki=y" >> ./.config
 else
+    # 物理路由/AP 平台保留漫游插件
     echo "CONFIG_PACKAGE_luci-app-usteer=y" >> ./.config
 fi
 
 # =========================================================
-# 5. 高通 (QUALCOMMAX) 修复与优化 (解决 NSS 下载报错)
+# 5. 高通 (QUALCOMMAX) 专项修复与 AP 加速补完
 # =========================================================
 if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
-    echo "执行 QUALCOMMAX 专项修复..."
+    echo "执行 QUALCOMMAX 专项修复与加速补完..."
     
-    # [修复] 强制跳过 NSS 固件哈希校验 (解决 ERROR: nss-firmware failed to build)
+    # [修复] 跳过 NSS 固件哈希校验
     find ./feeds/nss_packages/ -wholename "*/nss-firmware/Makefile" -exec sed -i 's/PKG_HASH:=.*/PKG_HASH:=skip/g' {} +
     find ./feeds/nss_packages/ -name "Makefile" | xargs sed -i 's/PKG_MIRROR_HASH:=.*/PKG_MIRROR_HASH:=skip/g' 2>/dev/null || true
     
-    # [修复] 替换失效的 Qualcomm 下载域名为 GitCodelinaro 镜像
-    find ./feeds/nss_packages/ -name "Makefile" | xargs sed -i 's/https:\/\/sources.openwrt.org\/.*qca-nss/https:\/\/git.codelinaro.org\/clo\/la\/platform\/vendor\/qcom-opensource\/wlan\/fw-api/-/archive\/main\/fw-api-main.tar.gz?path=qca-nss/g' 2>/dev/null || true
+    # [补完] NSS 桥接管理加速 (AP 模式核心)
+    echo "CONFIG_PACKAGE_kmod-qca-nss-drv-bridge-mgr=y" >> ./.config
+    echo "CONFIG_PACKAGE_iperf3=y" >> ./.config
 
     # NSS 固件版本选型
     if [[ "${WRT_CONFIG,,}" == *"ipq50"* ]]; then
@@ -83,31 +99,35 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
     fi
 fi
 
+# =========================================================
+# 5.1 联发科 (FILOGIC/MEDIATEK) 专项优化
+# =========================================================
+if [[ "${WRT_TARGET^^}" == *"FILOGIC"* || "${WRT_TARGET^^}" == *"MEDIATEK"* ]]; then
+    echo "执行 FILOGIC/MTK 专项硬件加速优化..."
+    echo "CONFIG_PACKAGE_kmod-mt798x-hwnat=y" >> ./.config
+fi
+
 # 雅典娜特定逻辑
 if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
     echo "CONFIG_PACKAGE_luci-app-athena-led=y" >> ./.config
     echo "CONFIG_PACKAGE_luci-app-samba4=y" >> ./.config
-    echo "CONFIG_SAMBA4_SERVER_WSDD2=y" >> ./.config
-    echo "CONFIG_SAMBA4_SERVER_NETBIOS=y" >> ./.config
     
     if [[ "${WRT_CONFIG,,}" == *"_main"* ]]; then
         echo "CONFIG_PACKAGE_luci-app-sqm=y" >> ./.config
         echo "CONFIG_PACKAGE_sqm-scripts-nss=y" >> ./.config
         echo "CONFIG_PACKAGE_luci-app-pushbot=y" >> ./.config
-        echo "CONFIG_PACKAGE_conntrack-tools=y" >> ./.config
     fi
 fi
 
 # =========================================================
-# 6. 移除断头依赖 (解决 WARNING 导致的编译中断)
+# 6. 移除无效依赖 (防止编译中断)
 # =========================================================
-# 移除源码中存在但 feeds 缺失的导致报错的包
 sed -i '/CONFIG_PACKAGE_onionshare-cli/d' ./.config
 sed -i '/CONFIG_PACKAGE_qmodem/d' ./.config
 sed -i '/CONFIG_PACKAGE_asterisk/d' ./.config
 
 # =========================================================
-# 7. Dumb AP 模式处理
+# 7. Dumb AP 模式处理 (防火墙 ACCEPT)
 # =========================================================
 if [[ "${WRT_CONFIG,,}" == *"cudy_tr3000-v1"* || "${WRT_CONFIG,,}" == *"aliyun_ap8220"* || ("${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* && "${WRT_CONFIG,,}" != *"_main"*) ]]; then
     sed -i '/luci-app-sqm/d' ./.config
@@ -128,7 +148,7 @@ EOF
 fi
 
 # =========================================================
-# 8. 全局收尾 (Argon 主题与 SSH)
+# 8. 全局收尾 (主题与 SSH)
 # =========================================================
 sed -i '/CONFIG_PACKAGE_luci-theme-/d' ./.config
 find ./feeds/luci/collections/ -type f -name "Makefile" | xargs sed -i "s/luci-theme-bootstrap/luci-theme-argon/g"
@@ -148,8 +168,8 @@ config dropbear
 	option enable '1'
 EOF
 
-# 修复其他哈希问题
+# 修复哈希问题
 find ./package/ -wholename "*/ath11k-firmware/Makefile" | xargs sed -i 's/PKG_HASH:=.*/PKG_HASH:=skip/g' 2>/dev/null
 find ./package/ -wholename "*/usteer/Makefile" | xargs sed -i 's/PKG_MIRROR_HASH:=.*/PKG_MIRROR_HASH:=skip/g' 2>/dev/null
 
-echo "Settings.sh 修复完成."
+echo "Settings.sh 优化完成."
