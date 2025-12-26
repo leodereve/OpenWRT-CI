@@ -48,32 +48,42 @@ echo "CONFIG_PACKAGE_luci=y" >> ./.config
 echo "CONFIG_LUCI_LANG_zh_Hans=y" >> ./.config
 
 # =========================================================
-# 4. 插件分配与全平台 Mesh 漫游锁定
+# 4. 插件分配与旁路由优化
 # =========================================================
-# [通用] 强制所有平台锁定 wpad-mesh-openssl 以支持 802.11k/v/r
-sed -i '/CONFIG_PACKAGE_wpad/d' ./.config
-sed -i '/CONFIG_PACKAGE_hostapd/d' ./.config
-echo "CONFIG_PACKAGE_wpad-mesh-openssl=y" >> ./.config
 
 if [[ "${WRT_CONFIG^^}" == *"X86"* ]]; then
     echo "执行 X86 专项优化 (旁路由模式)..."
-    # 1. 移除无线漫游插件（x86 旁路由不需要）
+
+    # 1. 彻底移除无线相关软件包（解决 hostapd/wpad 编译报错）
+    # 旁路由无 Wi-Fi 硬件，直接删除所有 wpad 和 hostapd 配置
+    sed -i '/CONFIG_PACKAGE_wpad/d' ./.config
+    sed -i '/CONFIG_PACKAGE_hostapd/d' ./.config
+    echo "# CONFIG_PACKAGE_wpad-mesh-openssl is not set" >> ./.config
+    echo "# CONFIG_PACKAGE_hostapd-common is not set" >> ./.config
+
+    # 2. 移除无线漫游及相关插件
     sed -i '/CONFIG_PACKAGE_luci-app-usteer/d' ./.config
     echo "# CONFIG_PACKAGE_luci-app-usteer is not set" >> ./.config
     
-    # 2. 移除 LED 设置菜单 (Docker 环境无物理 LED，防止报错)
+    # 3. 移除 LED 设置菜单 (x86 环境通常不需要，防止报错)
     sed -i '/CONFIG_PACKAGE_luci-app-ledtrig-rssi/d' ./.config
     sed -i '/CONFIG_PACKAGE_luci-app-ledtrig-usbdev/d' ./.config
     echo "# CONFIG_PACKAGE_luci-app-led-control is not set" >> ./.config
     
-    # 3. 核心插件分配
+    # 4. 核心插件分配
     sed -i '/CONFIG_PACKAGE_luci-app-wol/d' ./.config
     echo "CONFIG_PACKAGE_luci-app-wolplus=y" >> ./.config
     echo "CONFIG_PACKAGE_mosdns=y" >> ./.config
     echo "CONFIG_PACKAGE_luci-app-mosdns=y" >> ./.config
     echo "CONFIG_PACKAGE_luci-app-nikki=y" >> ./.config
+    
 else
-    # 物理路由/AP 平台保留漫游插件
+    # 物理路由/AP 平台逻辑
+    echo "执行 物理路由/AP 平台配置..."
+    # 强制锁定 wpad-mesh-openssl 以支持 802.11k/v/r
+    sed -i '/CONFIG_PACKAGE_wpad/d' ./.config
+    sed -i '/CONFIG_PACKAGE_hostapd/d' ./.config
+    echo "CONFIG_PACKAGE_wpad-mesh-openssl=y" >> ./.config
     echo "CONFIG_PACKAGE_luci-app-usteer=y" >> ./.config
 fi
 
