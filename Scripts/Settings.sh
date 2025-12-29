@@ -70,12 +70,25 @@ if [[ "${WRT_CONFIG^^}" == *"X86"* ]]; then
     sed -i '/CONFIG_PACKAGE_luci-app-ledtrig-usbdev/d' ./.config
     echo "# CONFIG_PACKAGE_luci-app-led-control is not set" >> ./.config
     
-    # 4. 核心插件分配
+        # 4. 核心插件分配 (修复 2025 年新版依赖冲突)
     sed -i '/CONFIG_PACKAGE_luci-app-wol/d' ./.config
     echo "CONFIG_PACKAGE_luci-app-wolplus=y" >> ./.config
+    
+    # 启用 MosDNS
     echo "CONFIG_PACKAGE_mosdns=y" >> ./.config
     echo "CONFIG_PACKAGE_luci-app-mosdns=y" >> ./.config
+    
+    # 启用 Nikki 并强制关闭可能冲突的 GeoData 包，让插件内部逻辑自行处理
     echo "CONFIG_PACKAGE_luci-app-nikki=y" >> ./.config
+    
+    # [关键修复] 解决 v2ray-geodata 冲突：强制不选由 MosDNS 额外拉起的冲突包
+    echo "# CONFIG_PACKAGE_v2ray-geoip is not set" >> ./.config
+    echo "# CONFIG_PACKAGE_v2ray-geosite is not set" >> ./.config
+    
+    # [关键修复] 解决 nikki 自身重叠冲突
+    # 报错显示 nikki 冲突 nikki，通常是选了不同版本的 binary
+    sed -i '/CONFIG_PACKAGE_nikki/d' ./.config
+    echo "CONFIG_PACKAGE_nikki=y" >> ./.config
     
 else
     # 物理路由/AP 平台逻辑
@@ -125,8 +138,10 @@ if [[ "${WRT_CONFIG,,}" == *"jdcloud_re-cs-02"* ]]; then
     if [[ "${WRT_CONFIG,,}" == *"_main"* ]]; then
         echo "CONFIG_PACKAGE_luci-app-sqm=y" >> ./.config
         echo "CONFIG_PACKAGE_sqm-scripts-nss=y" >> ./.config
+		# [修改点] 确保 pushbot 被选中，但清理其可能引发的重复依赖
+        sed -i '/CONFIG_PACKAGE_luci-app-pushbot/d' ./.config
         echo "CONFIG_PACKAGE_luci-app-pushbot=y" >> ./.config
-		echo "CONFIG_PACKAGE_conntrack-tools=y" >> ./.config
+        echo "CONFIG_PACKAGE_conntrack-tools=y" >> ./.config
         echo "CONFIG_PACKAGE_conntrack=y" >> ./.config
     fi
 fi
@@ -137,6 +152,10 @@ fi
 sed -i '/CONFIG_PACKAGE_onionshare-cli/d' ./.config
 sed -i '/CONFIG_PACKAGE_qmodem/d' ./.config
 sed -i '/CONFIG_PACKAGE_asterisk/d' ./.config
+sed -i '/CONFIG_PACKAGE_v2ray-geodata/d' ./.config
+# [修复] 解决 2025 年新版 APK 管理器下的 jq 冲突
+sed -i '/CONFIG_PACKAGE_jq/d' ./.config
+echo "CONFIG_PACKAGE_jq=y" >> ./.config
 
 # =========================================================
 # 7. Dumb AP 模式处理 (防火墙 ACCEPT)
