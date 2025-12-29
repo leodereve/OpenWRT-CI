@@ -57,34 +57,44 @@ UPDATE_PACKAGE() {
 # =========================================================
 # 2. 插件列表 (共 27 项)
 # =========================================================
-UPDATE_PACKAGE "luci-theme-argon" "jerrykuku/luci-theme-argon" "master" "name"
-UPDATE_PACKAGE "luci-app-argon-config" "jerrykuku/luci-app-argon-config" "master" "name"
-UPDATE_PACKAGE "luci-theme-kucat" "sirpdboy/luci-theme-kucat" "master" "name"
-UPDATE_PACKAGE "luci-app-kucat-config" "sirpdboy/luci-app-kucat-config" "master" "name"
+# =========================================================
+# 2. 插件列表 (保持 27 项插件不变，严格对照原版写法修正)
+# =========================================================
+UPDATE_PACKAGE "luci-theme-argon" "jerrykuku/luci-theme-argon" "master"
+UPDATE_PACKAGE "luci-app-argon-config" "jerrykuku/luci-app-argon-config" "master"
+UPDATE_PACKAGE "luci-theme-kucat" "sirpdboy/luci-theme-kucat" "master"
+UPDATE_PACKAGE "luci-app-kucat-config" "sirpdboy/luci-app-kucat-config" "master"
 UPDATE_PACKAGE "usteer" "leodereve/usteer" "master" "" "luci-app-usteer"
-UPDATE_PACKAGE "luci-app-athena-led" "NONGFAH/luci-app-athena-led" "main" "name"
-UPDATE_PACKAGE "luci-app-pushbot" "MasterOfStar/luci-app-pushbot" "master" "name"
-UPDATE_PACKAGE "homeproxy" "VIKINGYFY/homeproxy" "main" "name"
-UPDATE_PACKAGE "momo" "nikkinikki-org/OpenWrt-momo" "main" "name"
-UPDATE_PACKAGE "nikki" "nikkinikki-org/OpenWrt-nikki" "main" "name"
+UPDATE_PACKAGE "luci-app-athena-led" "NONGFAH/luci-app-athena-led" "main"
+UPDATE_PACKAGE "luci-app-pushbot" "MasterOfStar/luci-app-pushbot" "master"
+
+UPDATE_PACKAGE "homeproxy" "VIKINGYFY/homeproxy" "main"
+UPDATE_PACKAGE "momo" "nikkinikki-org/OpenWrt-momo" "main"
+UPDATE_PACKAGE "nikki" "nikkinikki-org/OpenWrt-nikki" "main"
 UPDATE_PACKAGE "openclash" "vernesong/OpenClash" "dev" "pkg"
 UPDATE_PACKAGE "passwall" "xiaorouji/openwrt-passwall" "main" "pkg"
 UPDATE_PACKAGE "passwall2" "xiaorouji/openwrt-passwall2" "main" "pkg"
-UPDATE_PACKAGE "luci-app-tailscale" "asvow/luci-app-tailscale" "main" "name"
-UPDATE_PACKAGE "ddns-go" "sirpdboy/luci-app-ddns-go" "main" "name"
-UPDATE_PACKAGE "diskman" "lisaac/luci-app-diskman" "master" "name"
-UPDATE_PACKAGE "easytier" "EasyTier/luci-app-easytier" "main" "name"
-UPDATE_PACKAGE "fancontrol" "rockjake/luci-app-fancontrol" "main" "name"
-UPDATE_PACKAGE "gecoosac" "lwb1978/openwrt-gecoosac" "main" "name"
-UPDATE_PACKAGE "mosdns" "sbwml/luci-app-mosdns" "v5" "name"
+
+UPDATE_PACKAGE "luci-app-tailscale" "asvow/luci-app-tailscale" "main"
+
+UPDATE_PACKAGE "ddns-go" "sirpdboy/luci-app-ddns-go" "main"
+UPDATE_PACKAGE "diskman" "lisaac/luci-app-diskman" "master"
+UPDATE_PACKAGE "easytier" "EasyTier/luci-app-easytier" "main"
+UPDATE_PACKAGE "fancontrol" "rockjake/luci-app-fancontrol" "main"
+UPDATE_PACKAGE "gecoosac" "lwb1978/openwrt-gecoosac" "main"
+# 修正：恢复 v2dat 提取，解决 v2ray-geoip 缺失问题
+UPDATE_PACKAGE "mosdns" "sbwml/luci-app-mosdns" "v5" "" "v2dat"
+# 修正：恢复多组件提取逻辑
 UPDATE_PACKAGE "netspeedtest" "sirpdboy/luci-app-netspeedtest" "master" "" "homebox speedtest"
-UPDATE_PACKAGE "openlist2" "sbwml/luci-app-openlist2" "main" "name"
-UPDATE_PACKAGE "partexp" "sirpdboy/luci-app-partexp" "main" "name"
+UPDATE_PACKAGE "openlist2" "sbwml/luci-app-openlist2" "main"
+UPDATE_PACKAGE "partexp" "sirpdboy/luci-app-partexp" "main"
+# 修正：恢复 qt6 等依赖提取
 UPDATE_PACKAGE "qbittorrent" "sbwml/luci-app-qbittorrent" "master" "" "qt6base qt6tools rblibtorrent"
-UPDATE_PACKAGE "qmodem" "FUjr/QModem" "main" "name"
-UPDATE_PACKAGE "quickfile" "sbwml/luci-app-quickfile" "main" "name"
+UPDATE_PACKAGE "qmodem" "FUjr/QModem" "main"
+UPDATE_PACKAGE "quickfile" "sbwml/luci-app-quickfile" "main"
+# 修正：恢复 wolplus 等依赖提取
 UPDATE_PACKAGE "viking" "VIKINGYFY/packages" "main" "" "luci-app-timewol luci-app-wolplus"
-UPDATE_PACKAGE "vnt" "lmq8267/luci-app-vnt" "main" "name"
+UPDATE_PACKAGE "vnt" "lmq8267/luci-app-vnt" "main"
 
 # =========================================================
 # 3. 更新版本函数 (针对 sing-box)
