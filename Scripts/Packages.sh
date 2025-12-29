@@ -8,50 +8,52 @@ UPDATE_PACKAGE() {
 	local PKG_REPO="$2"
 	local PKG_BRANCH="$3"
 	local PKG_SPECIAL="$4"
-	local PKG_LIST=("$PKG_NAME" $5)
+	local EXTRA_PKGS="$5"
+	local PKG_LIST=("$PKG_NAME" $EXTRA_PKGS)
 	
-	# 手动提取仓库名（处理斜杠后的部分）
+	# 提取仓库名称
 	local REPO_NAME=$(echo "$PKG_REPO" | awk -F'/' '{print $NF}')
 
 	echo " "
-	# 深度删除本地可能存在的重复软件包
+	echo "---------------------------------------------------------------"
+	# 深度清理 feeds 中的冲突
 	for NAME in "${PKG_LIST[@]}"; do
-		echo "正在检索并清理重复源码: $NAME"
-		local FOUND_DIRS=$(find ../feeds/ -type d -iname "*$NAME*" 2>/dev/null)
+		echo "正在检索并清理冲突源码: $NAME"
+		local FOUND_DIRS=$(find ../feeds/ -type d -name "$NAME" 2>/dev/null)
 		if [ -n "$FOUND_DIRS" ]; then
-			while read -r DIR; do
-				rm -rf "$DIR"
-				echo "已删除冲突目录: $DIR"
-			done <<< "$FOUND_DIRS"
+			echo "$FOUND_DIRS" | while read -r DIR; do
+				[ -d "$DIR" ] && rm -rf "$DIR" && echo "已移除冲突目录: $DIR"
+			done
 		fi
 	done
 
-	# 【终极修复】直接使用完整变量，不进行额外拼接
-	local FULL_URL="github.com{PKG_REPO}.git"
-	echo "正在执行克隆: $FULL_URL"
+	# 【核心修复：确保这里有 $ 符号】
+	local FULL_URL="github.com"
+	echo "正在克隆仓库: $FULL_URL"
 	
+	# 执行克隆
 	git clone --depth=1 --single-branch --branch "$PKG_BRANCH" "$FULL_URL" "$REPO_NAME"
 	
 	if [ $? -ne 0 ]; then
-		echo "错误: $PKG_NAME 克隆失败，请检查网络或 URL: $FULL_URL"
+		echo "错误: $PKG_NAME 下载失败！地址: $FULL_URL"
 		return 1
 	fi
 
-	# 处理克隆后的目录
+	# 处理目录逻辑
 	if [[ "$PKG_SPECIAL" == "pkg" ]]; then
 		find "./$REPO_NAME/" -maxdepth 3 -type d -iname "*$PKG_NAME*" -prune -exec cp -rf {} ./ \;
 		rm -rf "./$REPO_NAME"
 	elif [[ "$PKG_SPECIAL" == "name" ]]; then
-		rm -rf "$PKG_NAME"
+		[ -d "$PKG_NAME" ] && rm -rf "$PKG_NAME"
 		mv -f "$REPO_NAME" "$PKG_NAME"
 	else
 		[ -d "$PKG_NAME" ] && rm -rf "$PKG_NAME"
-		echo "插件 $PKG_NAME 已就绪"
+		echo "插件 $PKG_NAME 部署完成"
 	fi
 }
 
 # =========================================================
-# 2. 插件调用列表
+# 2. 插件列表 (共 27 项)
 # =========================================================
 UPDATE_PACKAGE "luci-theme-argon" "jerrykuku/luci-theme-argon" "master" "name"
 UPDATE_PACKAGE "luci-app-argon-config" "jerrykuku/luci-app-argon-config" "master" "name"
@@ -83,19 +85,19 @@ UPDATE_PACKAGE "viking" "VIKINGYFY/packages" "main" "" "luci-app-timewol luci-ap
 UPDATE_PACKAGE "vnt" "lmq8267/luci-app-vnt" "main" "name"
 
 # =========================================================
-# 3. 版本更新函数
+# 3. 版本更新 (sing-box)
 # =========================================================
 UPDATE_VERSION() {
 	local PKG_NAME="$1"
 	local PKG_MARK=${2:-false}
-	local PKG_FILES=$(find ./ ../feeds/ -maxdepth 4 -type f -wholename "*/$PKG_NAME/Makefile" 2>/dev/null)
+	local PKG_FILES=$(find ./ ../feeds/ -maxdepth 4 -type f -name "Makefile" | grep "/$PKG_NAME/" 2>/dev/null)
 	[ -z "$PKG_FILES" ] && return
 	for PKG_FILE in $PKG_FILES; do
 		local REPO_PATH=$(grep -Po "PKG_SOURCE_URL:=github.com\K[^/ ]+/[^/ ]+(?=\.git|/| )" "$PKG_FILE" | head -n 1)
 		[ -z "$REPO_PATH" ] && continue
 		local API_URL="api.github.com"
 		local PKG_TAG=$(curl -sL "$API_URL" | jq -r "if type==\"array\" then map(select(.prerelease == $PKG_MARK)) | first | .tag_name else empty end")
-		[ -z "$PKG_TAG" ] || [ "$PKG_TAG" == "null" ] && continue
+		if [[ -z "$PKG_TAG" || "$PKG_TAG" == "null" ]]; then continue; fi
 		local OLD_VER=$(grep -Po "PKG_VERSION:=\K.*" "$PKG_FILE")
 		local NEW_VER=$(echo "$PKG_TAG" | sed -E 's/[^0-9]+/\./g; s/^\.|\.$//g')
 		if [[ "$NEW_VER" =~ ^[0-9].* ]] && dpkg --compare-versions "$OLD_VER" lt "$NEW_VER" 2>/dev/null; then
@@ -107,6 +109,7 @@ UPDATE_VERSION() {
 			if [ -n "$NEW_HASH" ]; then
 				sed -i "s/PKG_VERSION:=.*/PKG_VERSION:=$NEW_VER/g" "$PKG_FILE"
 				sed -i "s/PKG_HASH:=.*/PKG_HASH:=$NEW_HASH/g" "$PKG_FILE"
+				echo "已更新 $PKG_NAME 至 $NEW_VER"
 			fi
 		fi
 	done
@@ -114,9 +117,11 @@ UPDATE_VERSION() {
 
 UPDATE_VERSION "sing-box"
 
-# 强制解决冲突
+# =========================================================
+# 4. 强制解决冲突
+# =========================================================
 for CONFLICT in jq wpad* hostapd* v2ray-geodata; do
     find ../feeds/ -type d -name "$CONFLICT" -prune -exec rm -rf {} \; 2>/dev/null
 done
 
-echo "脚本执行完成。"
+echo "Packages.sh 执行完成。"
