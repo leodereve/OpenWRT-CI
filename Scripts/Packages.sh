@@ -4,51 +4,48 @@
 # 1. 安装和更新软件包函数
 # =========================================================
 UPDATE_PACKAGE() {
-	local PKG_NAME="$1"
-	local PKG_REPO="$2"
-	local PKG_BRANCH="$3"
-	local PKG_SPECIAL="$4"
-	local EXTRA_PKGS="$5"
-	local PKG_LIST=("$PKG_NAME" $EXTRA_PKGS)
-	
-	# 提取仓库名称
-	local REPO_NAME=$(echo "$PKG_REPO" | awk -F'/' '{print $NF}')
+	local PKG_NAME=$1
+	local PKG_REPO=$2
+	local PKG_BRANCH=$3
+	local PKG_SPECIAL=$4
+	local PKG_LIST=("$PKG_NAME" $5)
+	local REPO_NAME=${PKG_REPO#*/}
 
 	echo " "
-	echo "---------------------------------------------------------------"
-	# 深度清理 feeds 中的冲突
+	# 深度删除本地可能存在的重复软件包，彻底解决 APK 冲突
 	for NAME in "${PKG_LIST[@]}"; do
-		echo "正在检索并清理冲突源码: $NAME"
-		local FOUND_DIRS=$(find ../feeds/ -type d -name "$NAME" 2>/dev/null)
+		echo "正在检索并清理重复源码: $NAME"
+		local FOUND_DIRS=$(find ../feeds/ -type d -iname "*$NAME*" 2>/dev/null)
+
 		if [ -n "$FOUND_DIRS" ]; then
-			echo "$FOUND_DIRS" | while read -r DIR; do
-				[ -d "$DIR" ] && rm -rf "$DIR" && echo "已移除冲突目录: $DIR"
-			done
+			while read -r DIR; do
+				rm -rf "$DIR"
+				echo "已删除冲突目录: $DIR"
+			done <<< "$FOUND_DIRS"
+		else
+			echo "未发现重复目录: $NAME"
 		fi
 	done
 
-	# 【核心修复：确保这里有 $ 符号】
-	local FULL_URL="github.com"
-	echo "正在克隆仓库: $FULL_URL"
+	# 【严格保持原样】使用您指定的克隆命令
+	echo "正在克隆: $PKG_REPO"
+	git clone --depth=1 --single-branch --branch $PKG_BRANCH "https://github.com$PKG_REPO.git"
 	
-	# 执行克隆
-	git clone --depth=1 --single-branch --branch "$PKG_BRANCH" "$FULL_URL" "$REPO_NAME"
-	
-	if [ $? -ne 0 ]; then
-		echo "错误: $PKG_NAME 下载失败！地址: $FULL_URL"
+	# 【增加提示】判断克隆操作是否成功
+	if [ $? -eq 0 ]; then
+		echo "成功：$PKG_NAME 已下载。"
+	else
+		echo "失败：$PKG_NAME 无法下载，请检查日志。"
 		return 1
 	fi
-
-	# 处理目录逻辑
+	
+	# 处理克隆后的仓库
 	if [[ "$PKG_SPECIAL" == "pkg" ]]; then
-		find "./$REPO_NAME/" -maxdepth 3 -type d -iname "*$PKG_NAME*" -prune -exec cp -rf {} ./ \;
-		rm -rf "./$REPO_NAME"
+		find ./$REPO_NAME/*/ -maxdepth 3 -type d -iname "*$PKG_NAME*" -prune -exec cp -rf {} ./ \;
+		rm -rf ./$REPO_NAME/
 	elif [[ "$PKG_SPECIAL" == "name" ]]; then
 		[ -d "$PKG_NAME" ] && rm -rf "$PKG_NAME"
 		mv -f "$REPO_NAME" "$PKG_NAME"
-	else
-		[ -d "$PKG_NAME" ] && rm -rf "$PKG_NAME"
-		echo "插件 $PKG_NAME 部署完成"
 	fi
 }
 
@@ -85,31 +82,42 @@ UPDATE_PACKAGE "viking" "VIKINGYFY/packages" "main" "" "luci-app-timewol luci-ap
 UPDATE_PACKAGE "vnt" "lmq8267/luci-app-vnt" "main" "name"
 
 # =========================================================
-# 3. 版本更新 (sing-box)
+# 3. 更新版本函数 (针对 sing-box)
 # =========================================================
 UPDATE_VERSION() {
-	local PKG_NAME="$1"
+	local PKG_NAME=$1
 	local PKG_MARK=${2:-false}
-	local PKG_FILES=$(find ./ ../feeds/ -maxdepth 4 -type f -name "Makefile" | grep "/$PKG_NAME/" 2>/dev/null)
-	[ -z "$PKG_FILES" ] && return
+	local PKG_FILES=$(find ./ ../feeds/ -maxdepth 4 -type f -wholename "*/$PKG_NAME/Makefile")
+
+	if [ -z "$PKG_FILES" ]; then
+		return
+	fi
+
 	for PKG_FILE in $PKG_FILES; do
-		local REPO_PATH=$(grep -Po "PKG_SOURCE_URL:=github.com\K[^/ ]+/[^/ ]+(?=\.git|/| )" "$PKG_FILE" | head -n 1)
-		[ -z "$REPO_PATH" ] && continue
-		local API_URL="api.github.com"
+		local PKG_REPO_PATH=$(grep -Po "PKG_SOURCE_URL:=https://.*github.com\K[^/ ]+/[^/ ]+(?=\.git|/| )" "$PKG_FILE" | head -n 1)
+		[ -z "$PKG_REPO_PATH" ] && continue
+		
+		local API_URL="https://api.github.comrepos/$PKG_REPO_PATH/releases"
 		local PKG_TAG=$(curl -sL "$API_URL" | jq -r "if type==\"array\" then map(select(.prerelease == $PKG_MARK)) | first | .tag_name else empty end")
-		if [[ -z "$PKG_TAG" || "$PKG_TAG" == "null" ]]; then continue; fi
+		
+		if [[ -z "$PKG_TAG" || "$PKG_TAG" == "null" ]]; then
+			continue
+		fi
+
 		local OLD_VER=$(grep -Po "PKG_VERSION:=\K.*" "$PKG_FILE")
 		local NEW_VER=$(echo "$PKG_TAG" | sed -E 's/[^0-9]+/\./g; s/^\.|\.$//g')
+		
 		if [[ "$NEW_VER" =~ ^[0-9].* ]] && dpkg --compare-versions "$OLD_VER" lt "$NEW_VER" 2>/dev/null; then
 			local OLD_URL=$(grep -Po "PKG_SOURCE_URL:=\K.*" "$PKG_FILE")
 			local OLD_FILE=$(grep -Po "PKG_SOURCE:=\K.*" "$PKG_FILE")
 			local PKG_URL=$([[ "$OLD_URL" == *"releases"* ]] && echo "${OLD_URL%/}/$OLD_FILE" || echo "${OLD_URL%/}")
 			local NEW_URL=$(echo "$PKG_URL" | sed "s/\$(PKG_VERSION)/$NEW_VER/g; s/\$(PKG_NAME)/$PKG_NAME/g")
 			local NEW_HASH=$(curl -sL "$NEW_URL" | sha256sum | cut -d ' ' -f 1)
+			
 			if [ -n "$NEW_HASH" ]; then
 				sed -i "s/PKG_VERSION:=.*/PKG_VERSION:=$NEW_VER/g" "$PKG_FILE"
 				sed -i "s/PKG_HASH:=.*/PKG_HASH:=$NEW_HASH/g" "$PKG_FILE"
-				echo "已更新 $PKG_NAME 至 $NEW_VER"
+				echo "$PKG_NAME 已更新至 $NEW_VER"
 			fi
 		fi
 	done
@@ -120,8 +128,10 @@ UPDATE_VERSION "sing-box"
 # =========================================================
 # 4. 强制解决冲突
 # =========================================================
-for CONFLICT in jq wpad* hostapd* v2ray-geodata; do
-    find ../feeds/ -type d -name "$CONFLICT" -prune -exec rm -rf {} \; 2>/dev/null
-done
+echo "执行最后阶段的冲突清理..."
+find ../feeds/ -type d -name "jq" -prune -exec rm -rf {} \;
+find ../feeds/ -type d -name "wpad*" -prune -exec rm -rf {} \;
+find ../feeds/ -type d -name "hostapd*" -prune -exec rm -rf {} \;
+find ../feeds/ -type d -name "v2ray-geodata" -prune -exec rm -rf {} \;
 
 echo "Packages.sh 执行完成。"
