@@ -46,9 +46,11 @@ UPDATE_PACKAGE() {
         find "./$REPO_NAME"/*/ -maxdepth 3 -type d -iname "*$PKG_NAME*" -prune -exec cp -rf {} ./ \;
         rm -rf "./$REPO_NAME/"
     elif [[ "$PKG_SPECIAL" == "name" ]]; then
-        # 把仓库根目录统一重命名为 PKG_NAME
-        [ -d "$PKG_NAME" ] && rm -rf "$PKG_NAME"
-        mv -f "$REPO_NAME" "$PKG_NAME"
+        # 【修正部分】只有当仓库名和包名不同时，才执行重命名，防止 mv 报错
+        if [ "$REPO_NAME" != "$PKG_NAME" ]; then
+            [ -d "$PKG_NAME" ] && rm -rf "$PKG_NAME"
+            mv -f "$REPO_NAME" "$PKG_NAME"
+        fi
     fi
 }
 
