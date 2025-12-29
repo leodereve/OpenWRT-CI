@@ -29,7 +29,8 @@ UPDATE_PACKAGE() {
 
 	# 【严格保持原样】使用您指定的克隆命令
 	echo "正在克隆: $PKG_REPO"
-	git clone --depth=1 --single-branch --branch $PKG_BRANCH "https://github.com$PKG_REPO.git"
+	# 修正：在 github.com 与 $PKG_REPO 之间补上斜杠 /
+	git clone --depth=1 --single-branch --branch "$PKG_BRANCH" "https://github.com/$PKG_REPO.git"
 	
 	# 【增加提示】判断克隆操作是否成功
 	if [ $? -eq 0 ]; then
@@ -41,8 +42,8 @@ UPDATE_PACKAGE() {
 	
 	# 处理克隆后的仓库
 	if [[ "$PKG_SPECIAL" == "pkg" ]]; then
-		find ./$REPO_NAME/*/ -maxdepth 3 -type d -iname "*$PKG_NAME*" -prune -exec cp -rf {} ./ \;
-		rm -rf ./$REPO_NAME/
+		find "./$REPO_NAME"/*/ -maxdepth 3 -type d -iname "*$PKG_NAME*" -prune -exec cp -rf {} ./ \;
+		rm -rf "./$REPO_NAME/"
 	elif [[ "$PKG_SPECIAL" == "name" ]]; then
 		[ -d "$PKG_NAME" ] && rm -rf "$PKG_NAME"
 		mv -f "$REPO_NAME" "$PKG_NAME"
@@ -87,32 +88,47 @@ UPDATE_PACKAGE "vnt" "lmq8267/luci-app-vnt" "main" "name"
 UPDATE_VERSION() {
 	local PKG_NAME=$1
 	local PKG_MARK=${2:-false}
-	local PKG_FILES=$(find ./ ../feeds/ -maxdepth 4 -type f -wholename "*/$PKG_NAME/Makefile")
+	local PKG_FILES
+	PKG_FILES=$(find ./ ../feeds/ -maxdepth 4 -type f -wholename "*/$PKG_NAME/Makefile")
 
 	if [ -z "$PKG_FILES" ]; then
 		return
 	fi
 
 	for PKG_FILE in $PKG_FILES; do
-		local PKG_REPO_PATH=$(grep -Po "PKG_SOURCE_URL:=https://.*github.com\K[^/ ]+/[^/ ]+(?=\.git|/| )" "$PKG_FILE" | head -n 1)
+		local PKG_REPO_PATH
+		PKG_REPO_PATH=$(grep -Po "PKG_SOURCE_URL:=https://.*github.com\K[^/ ]+/[^/ ]+(?=\.git|/| )" "$PKG_FILE" | head -n 1)
 		[ -z "$PKG_REPO_PATH" ] && continue
 		
-		local API_URL="https://api.github.comrepos/$PKG_REPO_PATH/releases"
-		local PKG_TAG=$(curl -sL "$API_URL" | jq -r "if type==\"array\" then map(select(.prerelease == $PKG_MARK)) | first | .tag_name else empty end")
+		# 修正：api.github.com 后面补上 /repos/
+		local API_URL="https://api.github.com/repos/$PKG_REPO_PATH/releases"
+		local PKG_TAG
+		PKG_TAG=$(curl -sL "$API_URL" | jq -r "if type==\"array\" then map(select(.prerelease == $PKG_MARK)) | first | .tag_name else empty end")
 		
 		if [[ -z "$PKG_TAG" || "$PKG_TAG" == "null" ]]; then
 			continue
 		fi
 
-		local OLD_VER=$(grep -Po "PKG_VERSION:=\K.*" "$PKG_FILE")
-		local NEW_VER=$(echo "$PKG_TAG" | sed -E 's/[^0-9]+/\./g; s/^\.|\.$//g')
+		local OLD_VER
+		OLD_VER=$(grep -Po "PKG_VERSION:=\K.*" "$PKG_FILE")
+		local NEW_VER
+		NEW_VER=$(echo "$PKG_TAG" | sed -E 's/[^0-9]+/\./g; s/^\.|\.$//g')
 		
 		if [[ "$NEW_VER" =~ ^[0-9].* ]] && dpkg --compare-versions "$OLD_VER" lt "$NEW_VER" 2>/dev/null; then
-			local OLD_URL=$(grep -Po "PKG_SOURCE_URL:=\K.*" "$PKG_FILE")
-			local OLD_FILE=$(grep -Po "PKG_SOURCE:=\K.*" "$PKG_FILE")
-			local PKG_URL=$([[ "$OLD_URL" == *"releases"* ]] && echo "${OLD_URL%/}/$OLD_FILE" || echo "${OLD_URL%/}")
-			local NEW_URL=$(echo "$PKG_URL" | sed "s/\$(PKG_VERSION)/$NEW_VER/g; s/\$(PKG_NAME)/$PKG_NAME/g")
-			local NEW_HASH=$(curl -sL "$NEW_URL" | sha256sum | cut -d ' ' -f 1)
+			local OLD_URL
+			OLD_URL=$(grep -Po "PKG_SOURCE_URL:=\K.*" "$PKG_FILE")
+			local OLD_FILE
+			OLD_FILE=$(grep -Po "PKG_SOURCE:=\K.*" "$PKG_FILE")
+			local PKG_URL
+			if [[ "$OLD_URL" == *"releases"* ]]; then
+				PKG_URL="${OLD_URL%/}/$OLD_FILE"
+			else
+				PKG_URL="${OLD_URL%/}"
+			fi
+			local NEW_URL
+			NEW_URL=$(echo "$PKG_URL" | sed "s/\$(PKG_VERSION)/$NEW_VER/g; s/\$(PKG_NAME)/$PKG_NAME/g")
+			local NEW_HASH
+			NEW_HASH=$(curl -sL "$NEW_URL" | sha256sum | cut -d ' ' -f 1)
 			
 			if [ -n "$NEW_HASH" ]; then
 				sed -i "s/PKG_VERSION:=.*/PKG_VERSION:=$NEW_VER/g" "$PKG_FILE"
