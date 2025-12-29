@@ -79,7 +79,12 @@ jobs:
         run: |
           cd ./wrt/
           ./scripts/feeds update -a
+          #./scripts/feeds install -a
+          # jq报错。在更新 feeds 之后执行
+          find feeds/ -name "jq" -type d | xargs rm -rf
+          # 然后重新安装
           ./scripts/feeds install -a
+
 
       - name: Custom Packages
         run: |
