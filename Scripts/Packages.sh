@@ -83,8 +83,29 @@ UPDATE_PACKAGE "easytier" "EasyTier/luci-app-easytier" "main"
 UPDATE_PACKAGE "fancontrol" "rockjake/luci-app-fancontrol" "main"
 UPDATE_PACKAGE "gecoosac" "lwb1978/openwrt-gecoosac" "main"
 # 修正：恢复 v2dat 提取，解决 v2ray-geoip 缺失问题
-UPDATE_PACKAGE "mosdns" "sbwml/luci-app-mosdns" "v5" "" "v2dat"
-UPDATE_PACKAGE "v2ray-geodata" "sbwml/v2ray-geodata" "master"
+# --- 2025年 MosDNS v5 适配部分（体现作者 sbwml） ---
+
+# 1. 替换 Golang 为 24.x（MosDNS 编译必需）
+# 这里体现了作者 sbwml
+rm -rf ../feeds/packages/lang/golang
+git clone --depth=1 https://github.com/sbwml/packages_lang_golang -b 24.x ../feeds/packages/lang/golang
+
+# 2. 强力清理 ImmortalWrt 自带的旧版插件索引，防止冲突
+find ../feeds/ -name "*v2ray-geodata*" | xargs rm -rf
+find ../feeds/ -name "*mosdns*" | xargs rm -rf
+
+# 3. 克隆插件源码（URL中明确体现作者 sbwml）
+rm -rf v2ray-geodata mosdns
+git clone --depth=1 https://github.com/sbwml/v2ray-geodata v2ray-geodata
+git clone --depth=1 -b v5 https://github.com/sbwml/luci-app-mosdns mosdns
+
+# 4. 强制刷新索引（解决 v2ray-geoip 不存在的问题）
+cd ..
+./scripts/feeds install -f v2ray-geodata
+./scripts/feeds install -f mosdns
+cd package/
+#UPDATE_PACKAGE "mosdns" "sbwml/luci-app-mosdns" "v5" "" "v2dat"
+#UPDATE_PACKAGE "v2ray-geodata" "sbwml/v2ray-geodata" "master"
 # 修正：恢复多组件提取逻辑
 UPDATE_PACKAGE "netspeedtest" "sirpdboy/luci-app-netspeedtest" "master" "" "homebox speedtest"
 UPDATE_PACKAGE "openlist2" "sbwml/luci-app-openlist2" "main"
