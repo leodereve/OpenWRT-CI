@@ -4,50 +4,52 @@
 # 1. 安装和更新软件包函数
 # =========================================================
 UPDATE_PACKAGE() {
-	local PKG_NAME=$1
-	local PKG_REPO=$2
-	local PKG_BRANCH=$3
-	local PKG_SPECIAL=$4
-	local PKG_LIST=("$PKG_NAME" $5)
-	local REPO_NAME=${PKG_REPO#*/}
+    local PKG_NAME=$1
+    local PKG_REPO=$2
+    local PKG_BRANCH=$3
+    local PKG_SPECIAL=$4
+    local PKG_LIST=("$PKG_NAME" $5)
+    # 仓库名：去掉前面的 "作者/"
+    local REPO_NAME=${PKG_REPO#*/}
 
-	echo " "
-	# 深度删除本地可能存在的重复软件包，彻底解决 APK 冲突
-	for NAME in "${PKG_LIST[@]}"; do
-		echo "正在检索并清理重复源码: $NAME"
-		local FOUND_DIRS=$(find ../feeds/ -type d -iname "*$NAME*" 2>/dev/null)
+    echo " "
+    # 深度删除本地可能存在的重复软件包，彻底解决 APK 冲突
+    for NAME in "${PKG_LIST[@]}"; do
+        echo "正在检索并清理重复源码: $NAME"
+        local FOUND_DIRS
+        FOUND_DIRS=$(find ../feeds/ -type d -iname "*$NAME*" 2>/dev/null)
 
-		if [ -n "$FOUND_DIRS" ]; then
-			while read -r DIR; do
-				rm -rf "$DIR"
-				echo "已删除冲突目录: $DIR"
-			done <<< "$FOUND_DIRS"
-		else
-			echo "未发现重复目录: $NAME"
-		fi
-	done
+        if [ -n "$FOUND_DIRS" ]; then
+            while read -r DIR; do
+                rm -rf "$DIR"
+                echo "已删除冲突目录: $DIR"
+            done <<< "$FOUND_DIRS"
+        else
+            echo "未发现重复目录: $NAME"
+        fi
+    done
 
-	# 【严格保持原样】使用您指定的克隆命令
-	echo "正在克隆: $PKG_REPO"
-	# 修正：在 github.com 与 $PKG_REPO 之间补上斜杠 /
-	git clone --depth=1 --single-branch --branch "$PKG_BRANCH" "https://github.com/$PKG_REPO.git"
-	
-	# 【增加提示】判断克隆操作是否成功
-	if [ $? -eq 0 ]; then
-		echo "成功：$PKG_NAME 已下载。"
-	else
-		echo "失败：$PKG_NAME 无法下载，请检查日志。"
-		return 1
-	fi
-	
-	# 处理克隆后的仓库
-	if [[ "$PKG_SPECIAL" == "pkg" ]]; then
-		find "./$REPO_NAME"/*/ -maxdepth 3 -type d -iname "*$PKG_NAME*" -prune -exec cp -rf {} ./ \;
-		rm -rf "./$REPO_NAME/"
-	elif [[ "$PKG_SPECIAL" == "name" ]]; then
-		[ -d "$PKG_NAME" ] && rm -rf "$PKG_NAME"
-		mv -f "$REPO_NAME" "$PKG_NAME"
-	fi
+    echo "正在克隆: $PKG_REPO"
+    # 注意：这里一定要是 github.com/ + PKG_REPO
+    git clone --depth=1 --single-branch --branch "$PKG_BRANCH" "https://github.com/$PKG_REPO.git"
+    
+    if [ $? -eq 0 ]; then
+        echo "成功：$PKG_NAME 已下载。"
+    else
+        echo "失败：$PKG_NAME 无法下载，请检查日志。"
+        return 1
+    fi
+    
+    # 处理克隆后的仓库
+    if [[ "$PKG_SPECIAL" == "pkg" ]]; then
+        # openclash / passwall 这种多子目录仓库
+        find "./$REPO_NAME"/*/ -maxdepth 3 -type d -iname "*$PKG_NAME*" -prune -exec cp -rf {} ./ \;
+        rm -rf "./$REPO_NAME/"
+    elif [[ "$PKG_SPECIAL" == "name" ]]; then
+        # 把仓库根目录统一重命名为 PKG_NAME
+        [ -d "$PKG_NAME" ] && rm -rf "$PKG_NAME"
+        mv -f "$REPO_NAME" "$PKG_NAME"
+    fi
 }
 
 # =========================================================
