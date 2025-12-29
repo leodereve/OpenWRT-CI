@@ -181,7 +181,7 @@ UPDATE_VERSION "sing-box"
 # 4. 强制解决冲突
 # =========================================================
 echo "执行最后阶段的冲突清理..."
-find ../feeds/ -type d -name "jq" -prune -exec rm -rf {} \;
+#find ../feeds/ #find ../feeds/ -type d -name "jq" -prune -e
 find ../feeds/ -type d -name "wpad*" -prune -exec rm -rf {} \;
 find ../feeds/ -type d -name "hostapd*" -prune -exec rm -rf {} \;
 find ../feeds/ -type d -name "v2ray-geodata" -prune -exec rm -rf {} \;
