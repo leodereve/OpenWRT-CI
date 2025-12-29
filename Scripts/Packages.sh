@@ -4,15 +4,17 @@
 # 1. 安装和更新软件包函数
 # =========================================================
 UPDATE_PACKAGE() {
-	local PKG_NAME=$1
-	local PKG_REPO=$2
-	local PKG_BRANCH=$3
-	local PKG_SPECIAL=$4
+	local PKG_NAME="$1"
+	local PKG_REPO="$2"
+	local PKG_BRANCH="$3"
+	local PKG_SPECIAL="$4"
 	local PKG_LIST=("$PKG_NAME" $5)
-	local REPO_NAME=${PKG_REPO#*/}
+	
+	# 手动提取仓库名（处理斜杠后的部分）
+	local REPO_NAME=$(echo "$PKG_REPO" | awk -F'/' '{print $NF}')
 
 	echo " "
-	# 深度删除本地可能存在的重复软件包，彻底解决 APK 冲突
+	# 深度删除本地可能存在的重复软件包
 	for NAME in "${PKG_LIST[@]}"; do
 		echo "正在检索并清理重复源码: $NAME"
 		local FOUND_DIRS=$(find ../feeds/ -type d -iname "*$NAME*" 2>/dev/null)
@@ -21,23 +23,21 @@ UPDATE_PACKAGE() {
 				rm -rf "$DIR"
 				echo "已删除冲突目录: $DIR"
 			done <<< "$FOUND_DIRS"
-		else
-			echo "未发现重复目录: $NAME"
 		fi
 	done
 
-	# 【修正】补全 https://、变量符号 $ 和路径分隔符 /
-	local REPO_URL="github.com"
-	echo "正在从 $REPO_URL 克隆插件..."
+	# 【终极修复】直接使用完整变量，不进行额外拼接
+	local FULL_URL="github.com{PKG_REPO}.git"
+	echo "正在执行克隆: $FULL_URL"
 	
-	git clone --depth=1 --single-branch --branch "$PKG_BRANCH" "$REPO_URL" "$REPO_NAME"
+	git clone --depth=1 --single-branch --branch "$PKG_BRANCH" "$FULL_URL" "$REPO_NAME"
 	
 	if [ $? -ne 0 ]; then
-		echo "错误: 克隆 $PKG_NAME 失败"
+		echo "错误: $PKG_NAME 克隆失败，请检查网络或 URL: $FULL_URL"
 		return 1
 	fi
 
-	# 处理克隆的仓库
+	# 处理克隆后的目录
 	if [[ "$PKG_SPECIAL" == "pkg" ]]; then
 		find "./$REPO_NAME/" -maxdepth 3 -type d -iname "*$PKG_NAME*" -prune -exec cp -rf {} ./ \;
 		rm -rf "./$REPO_NAME"
@@ -46,12 +46,12 @@ UPDATE_PACKAGE() {
 		mv -f "$REPO_NAME" "$PKG_NAME"
 	else
 		[ -d "$PKG_NAME" ] && rm -rf "$PKG_NAME"
-		echo "插件 $PKG_NAME 已部署"
+		echo "插件 $PKG_NAME 已就绪"
 	fi
 }
 
 # =========================================================
-# 2. 插件调用列表 (共 27 项，一个不少)
+# 2. 插件调用列表
 # =========================================================
 UPDATE_PACKAGE "luci-theme-argon" "jerrykuku/luci-theme-argon" "master" "name"
 UPDATE_PACKAGE "luci-app-argon-config" "jerrykuku/luci-app-argon-config" "master" "name"
@@ -86,7 +86,7 @@ UPDATE_PACKAGE "vnt" "lmq8267/luci-app-vnt" "main" "name"
 # 3. 版本更新函数
 # =========================================================
 UPDATE_VERSION() {
-	local PKG_NAME=$1
+	local PKG_NAME="$1"
 	local PKG_MARK=${2:-false}
 	local PKG_FILES=$(find ./ ../feeds/ -maxdepth 4 -type f -wholename "*/$PKG_NAME/Makefile" 2>/dev/null)
 	[ -z "$PKG_FILES" ] && return
@@ -107,7 +107,6 @@ UPDATE_VERSION() {
 			if [ -n "$NEW_HASH" ]; then
 				sed -i "s/PKG_VERSION:=.*/PKG_VERSION:=$NEW_VER/g" "$PKG_FILE"
 				sed -i "s/PKG_HASH:=.*/PKG_HASH:=$NEW_HASH/g" "$PKG_FILE"
-				echo "$PKG_NAME 已更新至 $NEW_VER"
 			fi
 		fi
 	done
@@ -115,11 +114,9 @@ UPDATE_VERSION() {
 
 UPDATE_VERSION "sing-box"
 
-# =========================================================
-# 4. 强制解决冲突 (整合后的循环逻辑)
-# =========================================================
+# 强制解决冲突
 for CONFLICT in jq wpad* hostapd* v2ray-geodata; do
     find ../feeds/ -type d -name "$CONFLICT" -prune -exec rm -rf {} \; 2>/dev/null
 done
 
-echo "Packages.sh 执行完成。"
+echo "脚本执行完成。"
