@@ -12,11 +12,10 @@ UPDATE_PACKAGE() {
 	local REPO_NAME=${PKG_REPO#*/}
 
 	echo " "
-	# 深度删除本地可能存在的重复软件包，彻底解决冲突
+	# 深度删除本地可能存在的重复软件包，彻底解决 APK 冲突
 	for NAME in "${PKG_LIST[@]}"; do
 		echo "正在检索并清理重复源码: $NAME"
 		local FOUND_DIRS=$(find ../feeds/ -type d -iname "*$NAME*" 2>/dev/null)
-
 		if [ -n "$FOUND_DIRS" ]; then
 			while read -r DIR; do
 				rm -rf "$DIR"
@@ -27,9 +26,9 @@ UPDATE_PACKAGE() {
 		fi
 	done
 
-	# 【修正点：确保变量引用符号 $ 存在】
-	local REPO_URL="github.com{PKG_REPO}.git"
-	echo "正在克隆: $REPO_URL"
+	# 【修正】补全 https://、变量符号 $ 和路径分隔符 /
+	local REPO_URL="github.com"
+	echo "正在从 $REPO_URL 克隆插件..."
 	
 	git clone --depth=1 --single-branch --branch "$PKG_BRANCH" "$REPO_URL" "$REPO_NAME"
 	
@@ -38,7 +37,7 @@ UPDATE_PACKAGE() {
 		return 1
 	fi
 
-	# 处理克隆后的目录逻辑
+	# 处理克隆的仓库
 	if [[ "$PKG_SPECIAL" == "pkg" ]]; then
 		find "./$REPO_NAME/" -maxdepth 3 -type d -iname "*$PKG_NAME*" -prune -exec cp -rf {} ./ \;
 		rm -rf "./$REPO_NAME"
@@ -47,12 +46,12 @@ UPDATE_PACKAGE() {
 		mv -f "$REPO_NAME" "$PKG_NAME"
 	else
 		[ -d "$PKG_NAME" ] && rm -rf "$PKG_NAME"
-		echo "插件 $PKG_NAME 已部署在 ./$REPO_NAME"
+		echo "插件 $PKG_NAME 已部署"
 	fi
 }
 
 # =========================================================
-# 2. 插件列表 (保持不变)
+# 2. 插件调用列表 (共 27 项，一个不少)
 # =========================================================
 UPDATE_PACKAGE "luci-theme-argon" "jerrykuku/luci-theme-argon" "master" "name"
 UPDATE_PACKAGE "luci-app-argon-config" "jerrykuku/luci-app-argon-config" "master" "name"
@@ -84,38 +83,31 @@ UPDATE_PACKAGE "viking" "VIKINGYFY/packages" "main" "" "luci-app-timewol luci-ap
 UPDATE_PACKAGE "vnt" "lmq8267/luci-app-vnt" "main" "name"
 
 # =========================================================
-# 3. 更新版本函数 (确保 API 路径变量引用正确)
+# 3. 版本更新函数
 # =========================================================
 UPDATE_VERSION() {
 	local PKG_NAME=$1
 	local PKG_MARK=${2:-false}
 	local PKG_FILES=$(find ./ ../feeds/ -maxdepth 4 -type f -wholename "*/$PKG_NAME/Makefile" 2>/dev/null)
-
 	[ -z "$PKG_FILES" ] && return
-
 	for PKG_FILE in $PKG_FILES; do
 		local REPO_PATH=$(grep -Po "PKG_SOURCE_URL:=github.com\K[^/ ]+/[^/ ]+(?=\.git|/| )" "$PKG_FILE" | head -n 1)
 		[ -z "$REPO_PATH" ] && continue
-
-		# 【修正：确保 API 完整地址和变量符号】
-		local API_URL="api.github.com{REPO_PATH}/releases"
+		local API_URL="api.github.com"
 		local PKG_TAG=$(curl -sL "$API_URL" | jq -r "if type==\"array\" then map(select(.prerelease == $PKG_MARK)) | first | .tag_name else empty end")
-
 		[ -z "$PKG_TAG" ] || [ "$PKG_TAG" == "null" ] && continue
-
 		local OLD_VER=$(grep -Po "PKG_VERSION:=\K.*" "$PKG_FILE")
 		local NEW_VER=$(echo "$PKG_TAG" | sed -E 's/[^0-9]+/\./g; s/^\.|\.$//g')
-
 		if [[ "$NEW_VER" =~ ^[0-9].* ]] && dpkg --compare-versions "$OLD_VER" lt "$NEW_VER" 2>/dev/null; then
 			local OLD_URL=$(grep -Po "PKG_SOURCE_URL:=\K.*" "$PKG_FILE")
 			local OLD_FILE=$(grep -Po "PKG_SOURCE:=\K.*" "$PKG_FILE")
 			local PKG_URL=$([[ "$OLD_URL" == *"releases"* ]] && echo "${OLD_URL%/}/$OLD_FILE" || echo "${OLD_URL%/}")
 			local NEW_URL=$(echo "$PKG_URL" | sed "s/\$(PKG_VERSION)/$NEW_VER/g; s/\$(PKG_NAME)/$PKG_NAME/g")
 			local NEW_HASH=$(curl -sL "$NEW_URL" | sha256sum | cut -d ' ' -f 1)
-			
 			if [ -n "$NEW_HASH" ]; then
 				sed -i "s/PKG_VERSION:=.*/PKG_VERSION:=$NEW_VER/g" "$PKG_FILE"
 				sed -i "s/PKG_HASH:=.*/PKG_HASH:=$NEW_HASH/g" "$PKG_FILE"
+				echo "$PKG_NAME 已更新至 $NEW_VER"
 			fi
 		fi
 	done
@@ -123,9 +115,11 @@ UPDATE_VERSION() {
 
 UPDATE_VERSION "sing-box"
 
-# 最后清理
+# =========================================================
+# 4. 强制解决冲突 (整合后的循环逻辑)
+# =========================================================
 for CONFLICT in jq wpad* hostapd* v2ray-geodata; do
     find ../feeds/ -type d -name "$CONFLICT" -prune -exec rm -rf {} \; 2>/dev/null
 done
 
-echo "Packages.sh 脚本执行完成。"
+echo "Packages.sh 执行完成。"
