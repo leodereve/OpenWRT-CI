@@ -71,6 +71,22 @@ jobs:
           git clone --depth=1 --single-branch --branch $WRT_BRANCH $WRT_REPO ./wrt/
           cd ./wrt/ && echo "WRT_HASH=$(git log -1 --pretty=format:'%h')" >> $GITHUB_ENV
 
+      # 建立缓存，加速编译
+      - name: Cache Build Dependencies
+        uses: actions/cache@v4
+        with:
+          # 必须指向 /mnt/ 下的实体路径，不能指向 ./wrt/
+          path: |
+            /mnt/build_wrt/dl
+            /mnt/build_wrt/staging_dir/host
+            /mnt/build_wrt/staging_dir/toolchain-*
+            /mnt/build_wrt/build_dir/host
+            /mnt/build_wrt/build_dir/toolchain-*
+          # 使用 Config/*.txt 文件哈希作为缓存标识，更稳定可靠
+          key: ${{ runner.os }}-openwrt-${{ env.WRT_SOURCE }}-${{ env.WRT_BRANCH }}-${{ hashFiles('Config/*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-${{ env.WRT_SOURCE }}-${{ env.WRT_BRANCH }}-
+
       - name: Check Scripts
         run: |
           find ./ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
