@@ -123,10 +123,16 @@ jobs:
           fi
           $GITHUB_WORKSPACE/Scripts/Settings.sh
 
-          # 如需最大化利用缓存，可以考虑移除 make clean；先保持与你原脚本一致：
-          #make defconfig -j"$(nproc)" && make clean -j"$(nproc)"
-          # 如果日后觉得缓存利用不充分，可改为：
+          # 先生成最终 .config
           make defconfig -j"$(nproc)"
+
+          # 只有当 WRT_CONFIG 名称里包含 "nocache" 时，才执行 clean，强制全量编译
+          if [[ "${WRT_CONFIG,,}" == *"nocache"* ]]; then
+            echo "WRT_CONFIG 包含 'nocache'，执行 make clean，跳过缓存加速。"
+            make clean -j"$(nproc)"
+          else
+            echo "WRT_CONFIG 不含 'nocache'，保留 toolchain/staging_dir，充分利用缓存。"
+          fi
 
       - name: Compile Firmware
         if: env.WRT_TEST != 'true'
