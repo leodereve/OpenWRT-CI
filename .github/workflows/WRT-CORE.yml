@@ -135,15 +135,46 @@ jobs:
           [[ -z "$WRT_TAG" || "$WRT_TAG" == "null" ]] && WRT_TAG="AP"
 
           if [[ $WRT_TEST != 'true' ]]; then
-            echo "WRT_KVER=$(find ./bin/targets/ -type f -name "*.manifest" -exec grep -oP '^kernel - \K[\d\.]+' {} \;)" >> $GITHUB_ENV
+            # 1. 记录内核版本
+            MANIFEST=$(find ./bin/targets/ -type f -name "*.manifest" | head -n 1)
+            [[ -n "$MANIFEST" ]] && echo "WRT_KVER=$(grep -oP '^kernel - \K[\d\.]+' $MANIFEST)" >> $GITHUB_ENV
+            
+            # 2. 清理冗余描述文件
             find ./bin/targets/ -iregex ".*\(buildinfo\|json\|sha256sums\|packages\)$" -exec rm -rf {} +
-            for FILE in $(find ./bin/targets/ -type f -iname "*$WRT_TARGET*") ; do
-              EXT=$(basename $FILE | cut -d '.' -f 2-)
-              NEW_FILE="$WRT_TAG"-"$WRT_CONFIG"-"$WRT_DATE"."$EXT"
-              mv -f $FILE ./upload/$NEW_FILE
+            
+            # 3. 核心重命名逻辑
+            # 使用 -maxdepth 2 避免递归过深，精准捕捉 bin/targets 下的固件
+            find ./bin/targets/ -type f -iname "*$WRT_TARGET*" | while read -r FILE; do
+              FNAME=$(basename "$FILE")
+              
+              # 识别固件类型
+              if [[ "$FNAME" == *"factory"* ]]; then
+                FTYPE="-factory"
+              elif [[ "$FNAME" == *"sysupgrade"* ]]; then
+                FTYPE="-sysupgrade"
+              elif [[ "$FNAME" == *"ubi"* ]]; then
+                FTYPE="-ubi"
+              elif [[ "$FNAME" == *"combined-efi"* ]]; then
+                FTYPE="-efi"
+              else
+                FTYPE=""
+              fi
+              
+              # 精准获取后缀名 (处理 .bin, .img.gz, .itb 等)
+              # 不再使用 cut，改用 Shell 参数扩展
+              EXT="${FNAME#*.}" 
+              
+              NEW_FILE="${WRT_TAG}-${WRT_CONFIG}-${WRT_DATE}${FTYPE}.${EXT}"
+              
+              # 确保不移动重复文件，且重命名清晰
+              mv -f "$FILE" "./upload/$NEW_FILE"
+              echo "已打包固件: $NEW_FILE"
             done
+            
+            # 4. 兜底移动（处理漏网之鱼，如 .manifest 等）
             find ./bin/targets/ -type f -exec mv -f {} ./upload/ \;
           fi
+
 
       - name: Release Firmware
         uses: softprops/action-gh-release@master
