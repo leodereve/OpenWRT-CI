@@ -181,6 +181,11 @@ UPDATE_VERSION "sing-box"
 # 4. 强制解决冲突
 # =========================================================
 echo "执行最后阶段的冲突清理..."
+# --- 核心修复：物理删除导致 404 报错的驱动目录 ---
+# 使用 find 确保无论它在哪个子目录下都能被删掉
+find ../package/ -type d -name "*r8152*" -exec rm -rf {} \;
+find ../package/ -type d -name "*r8125*" -exec rm -rf {} \;
+find ../package/ -type d -name "*r8126*" -exec rm -rf {} \;
 #find ../feeds/ #find ../feeds/ -type d -name "jq" -prune -e
 find ../feeds/ -type d -name "wpad*" -prune -exec rm -rf {} \;
 find ../feeds/ -type d -name "hostapd*" -prune -exec rm -rf {} \;
