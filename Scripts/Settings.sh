@@ -68,7 +68,9 @@ if [[ "${WRT_CONFIG^^}" == *"X86"* ]]; then
 	# 在脚本中添加这一行 移除htop，因为其依赖sensors
     rm -rf ./feeds/packages/admin/htop
     rm -rf ./feeds/packages/utils/lm-sensors   # 移除传感器监控
+	sed -i '/CONFIG_PACKAGE_lm-sensors/d' .config
     rm -rf ./feeds/packages/utils/coremark     # 移除跑分工具
+	sed -i '/CONFIG_PACKAGE_autocore/d' .config
     # =======================================================================
 	
     # 1. 彻底移除无线相关软件包（解决 hostapd/wpad 编译报错）
