@@ -59,6 +59,14 @@ if [[ "${WRT_CONFIG^^}" == *"X86"* ]]; then
     rm -rf ./package/kernel/r8152
     rm -rf ./package/kernel/r8125
     rm -rf ./package/kernel/r8126
+	# 在 Settings.sh 中添加：
+    rm -rf ./package/usteer                   # 移除 usteer
+    rm -rf ./package/network/services/ppp      # 移除所有 PPP 拨号支持
+    rm -rf ./package/network/services/relayd   # 移除中继支持
+    rm -rf ./package/network/utils/usbutils    # 移除 usbutils
+    rm -rf ./package/kernel/button-hotplug     # 移除热插拔检测
+    rm -rf ./feeds/packages/utils/lm-sensors   # 移除传感器监控
+    rm -rf ./feeds/packages/utils/coremark     # 移除跑分工具
     # =======================================================================
 	
     # 1. 彻底移除无线相关软件包（解决 hostapd/wpad 编译报错）
