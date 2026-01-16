@@ -65,6 +65,8 @@ if [[ "${WRT_CONFIG^^}" == *"X86"* ]]; then
     rm -rf ./package/network/services/relayd   # 移除中继支持
     rm -rf ./package/network/utils/usbutils    # 移除 usbutils
     rm -rf ./package/kernel/button-hotplug     # 移除热插拔检测
+	# 在脚本中添加这一行 移除htop，因为其依赖sensors
+    rm -rf ./feeds/packages/admin/htop
     rm -rf ./feeds/packages/utils/lm-sensors   # 移除传感器监控
     rm -rf ./feeds/packages/utils/coremark     # 移除跑分工具
     # =======================================================================
