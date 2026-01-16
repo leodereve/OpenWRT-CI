@@ -19,6 +19,8 @@ CONFIG_TARGET_ROOTFS_TARGZ=y
 # =========================================================
 # --- 基础组件 ---
 CONFIG_PACKAGE_luci=y
+CONFIG_PACKAGE_luci-base=y
+CONFIG_PACKAGE_luci-compat=y
 
 # --- 1. Nikki (代理) ---
 CONFIG_PACKAGE_luci-app-nikki=y
@@ -50,16 +52,26 @@ CONFIG_PACKAGE_v2ray-geosite=y
 # CONFIG_PACKAGE_kmod-e1000e is not set
 # CONFIG_PACKAGE_kmod-i40e is not set
 # CONFIG_PACKAGE_kmod-ixgbe is not set
+# CONFIG_PACKAGE_kmod-ixgbevf is not set
+# CONFIG_PACKAGE_kmod-igbvf is not set
 # CONFIG_PACKAGE_kmod-r8169 is not set
 # CONFIG_PACKAGE_kmod-r8125 is not set
 # CONFIG_PACKAGE_kmod-r8101 is not set
 # CONFIG_PACKAGE_kmod-r8126 is not set
+# CONFIG_PACKAGE_kmod-r8168 is not set
 # CONFIG_PACKAGE_r8152-firmware is not set
-# 加这一行：完全禁用 r8152 驱动
 # CONFIG_PACKAGE_kmod-usb-net-rtl8152 is not set
+# CONFIG_PACKAGE_kmod-usb-net-rtl8150 is not set
+# CONFIG_PACKAGE_kmod-usb-net-asix is not set
+# CONFIG_PACKAGE_kmod-usb-net-asix-ax88179 is not set
 # CONFIG_PACKAGE_kmod-8139cp is not set
+# CONFIG_PACKAGE_kmod-8139too is not set
 # CONFIG_PACKAGE_kmod-pcnet32 is not set
 # CONFIG_PACKAGE_kmod-vmxnet3 is not set
+# CONFIG_PACKAGE_kmod-tulip is not set
+# CONFIG_PACKAGE_kmod-mii is not set
+# CONFIG_PACKAGE_kmod-mdio is not set
+# CONFIG_PACKAGE_kmod-libphy is not set
 
 # --- 移除磁盘工具与物理文件系统驱动 ---
 # CONFIG_PACKAGE_fdisk is not set
@@ -74,11 +86,19 @@ CONFIG_PACKAGE_v2ray-geosite=y
 # CONFIG_PACKAGE_kmod-fs-ext4 is not set
 # CONFIG_PACKAGE_kmod-fs-ntfs3 is not set
 # CONFIG_PACKAGE_kmod-fs-vfat is not set
+# CONFIG_PACKAGE_kmod-fs-exfat is not set
+# CONFIG_PACKAGE_kmod-fs-f2fs is not set
+# CONFIG_PACKAGE_kmod-scsi-core is not set
 
 # --- 移除 USB、手机共享及音频支持 ---
 # CONFIG_PACKAGE_kmod-usb-core is not set
 # CONFIG_PACKAGE_kmod-usb-net is not set
+# CONFIG_PACKAGE_kmod-usb-common is not set
+# CONFIG_PACKAGE_kmod-usb-dwc3 is not set
+# CONFIG_PACKAGE_kmod-usb-xhci-hcd is not set
+# CONFIG_PACKAGE_kmod-usb3 is not set
 # CONFIG_PACKAGE_usbutils is not set
+# CONFIG_PACKAGE_usbids is not set
 # CONFIG_PACKAGE_usbmuxd is not set
 # CONFIG_PACKAGE_libimobiledevice is not set
 # CONFIG_PACKAGE_kmod-usb-audio is not set
@@ -90,6 +110,8 @@ CONFIG_PACKAGE_v2ray-geosite=y
 # CONFIG_PACKAGE_relayd is not set
 # CONFIG_PACKAGE_miniupnpd-nftables is not set
 # CONFIG_PACKAGE_luci-app-upnp is not set
+# CONFIG_PACKAGE_odhcpd-ipv6only is not set
+# CONFIG_PACKAGE_odhcp6c is not set
 
 # --- 移除其他冗余组件 ---
 # CONFIG_PACKAGE_grub2-bios-setup is not set
@@ -99,6 +121,9 @@ CONFIG_PACKAGE_v2ray-geosite=y
 # CONFIG_PACKAGE_iperf3 is not set
 # CONFIG_PACKAGE_lm-sensors is not set
 # CONFIG_PACKAGE_ethtool is not set
+# CONFIG_PACKAGE_i915-firmware-dmc is not set
+# CONFIG_PACKAGE_kmod-input-core is not set
+# CONFIG_PACKAGE_kmod-hid is not set
 
 # --- 移除容器引擎相关 (避免镜像内嵌套 Docker) ---
 # CONFIG_PACKAGE_luci-app-dockerman is not set
@@ -109,4 +134,14 @@ CONFIG_PACKAGE_v2ray-geosite=y
 # CONFIG_PACKAGE_backuppc is not set
 # CONFIG_PACKAGE_tar is not set
 # CONFIG_PACKAGE_tar-xz is not set
+
+# =========================================================
+# 4. 补充配置 (确保旁路由核心功能运行)
+# =========================================================
+# 必须保留 TUN 模块，否则 Nikki 无法开启透明代理
+CONFIG_PACKAGE_kmod-tun=y
+# 必须保留 veth 模块，否则 Docker 网络可能无法初始化
+CONFIG_PACKAGE_kmod-veth=y
+# 建议保留全功能 IP 命令，方便调试旁路由路由表
+CONFIG_PACKAGE_ip-full=y
 
