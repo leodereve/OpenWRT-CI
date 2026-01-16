@@ -75,7 +75,21 @@ if [[ "${WRT_CONFIG^^}" == *"X86"* ]]; then
     sed -i '/CONFIG_PACKAGE_hostapd/d' ./.config
     echo "# CONFIG_PACKAGE_wpad-mesh-openssl is not set" >> ./.config
     echo "# CONFIG_PACKAGE_hostapd-common is not set" >> ./.config
-
+	 # 移除拨号、中继与 IPv6 (旁路由不需要)
+    sed -i '/CONFIG_PACKAGE_ppp/d' ./.config
+    sed -i '/CONFIG_PACKAGE_relayd/d' ./.config
+    sed -i '/CONFIG_PACKAGE_odhcp/d' ./.config
+    sed -i '/CONFIG_PACKAGE_luci-proto/d' ./.config
+    sed -i '/CONFIG_PACKAGE_luci-app-upnp/d' ./.config
+    # 移除物理硬件支持
+    sed -i '/CONFIG_PACKAGE_kmod-usb/d' ./.config
+    sed -i '/CONFIG_PACKAGE_kmod-fs/d' ./.config
+    sed -i '/CONFIG_PACKAGE_automount/d' ./.config
+    sed -i '/CONFIG_PACKAGE_block-mount/d' ./.config
+    sed -i '/CONFIG_PACKAGE_fdisk/d' ./.config
+    sed -i '/CONFIG_PACKAGE_lsblk/d' ./.config
+    sed -i '/CONFIG_PACKAGE_luci-app-package-manager/d' ./.config
+	
     # 2. 移除无线漫游及相关插件
     sed -i '/CONFIG_PACKAGE_luci-app-usteer/d' ./.config
     echo "# CONFIG_PACKAGE_luci-app-usteer is not set" >> ./.config
@@ -85,7 +99,7 @@ if [[ "${WRT_CONFIG^^}" == *"X86"* ]]; then
     sed -i '/CONFIG_PACKAGE_luci-app-ledtrig-usbdev/d' ./.config
     echo "# CONFIG_PACKAGE_luci-app-led-control is not set" >> ./.config
     
-        # 4. 核心插件分配 (修复 2025 年新版依赖冲突)
+    # 4. 核心插件分配 (修复 2025 年新版依赖冲突)
     sed -i '/CONFIG_PACKAGE_luci-app-wol/d' ./.config
     echo "CONFIG_PACKAGE_luci-app-wolplus=y" >> ./.config
     
@@ -95,6 +109,9 @@ if [[ "${WRT_CONFIG^^}" == *"X86"* ]]; then
     
     # 启用 Nikki 并强制关闭可能冲突的 GeoData 包，让插件内部逻辑自行处理
     echo "CONFIG_PACKAGE_luci-app-nikki=y" >> ./.config
+    # 启用 conntrack用于管理客户端连接
+	echo "CONFIG_PACKAGE_conntrack-tools=y" >> ./.config
+    echo "CONFIG_PACKAGE_conntrack=y" >> ./.config
     
     # [关键修复] 解决 v2ray-geodata 冲突：强制不选由 MosDNS 额外拉起的冲突包
     echo "# CONFIG_PACKAGE_v2ray-geoip is not set" >> ./.config
