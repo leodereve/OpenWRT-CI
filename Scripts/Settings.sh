@@ -53,7 +53,14 @@ echo "CONFIG_LUCI_LANG_zh_Hans=y" >> ./.config
 
 if [[ "${WRT_CONFIG^^}" == *"X86"* ]]; then
     echo "执行 X86 专项优化 (旁路由模式)..."
-
+	# ================= [关键修复：解决 r8152 等驱动 404 报错] =================
+    # 直接在源码目录物理删除这些会导致下载失败的包
+    # 只要文件夹没了，make download 就不会去尝试拉取它们
+    rm -rf ./package/kernel/r8152
+    rm -rf ./package/kernel/r8125
+    rm -rf ./package/kernel/r8126
+    # =======================================================================
+	
     # 1. 彻底移除无线相关软件包（解决 hostapd/wpad 编译报错）
     # 旁路由无 Wi-Fi 硬件，直接删除所有 wpad 和 hostapd 配置
     sed -i '/CONFIG_PACKAGE_wpad/d' ./.config
