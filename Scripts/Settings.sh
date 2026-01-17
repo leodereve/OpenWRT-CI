@@ -190,8 +190,11 @@ sed -i '/CONFIG_PACKAGE_qmodem/d' ./.config
 sed -i '/CONFIG_PACKAGE_asterisk/d' ./.config
 sed -i '/CONFIG_PACKAGE_v2ray-geodata/d' ./.config
 # [修复] 解决 2025 年新版 APK 管理器下的 jq 冲突
+# 这种写法更标准，防止重复追加
 sed -i '/CONFIG_PACKAGE_jq/d' ./.config
 echo "CONFIG_PACKAGE_jq=y" >> ./.config
+# 建议同时强制选中其核心依赖（如果有）
+echo "CONFIG_PACKAGE_libjq=y" >> ./.config
 
 # =========================================================
 # 7. Dumb AP 模式处理 (防火墙 ACCEPT)
