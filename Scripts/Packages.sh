@@ -88,7 +88,7 @@ UPDATE_PACKAGE "gecoosac" "lwb1978/openwrt-gecoosac" "main"
 # 1. 替换 Golang 为 24.x（MosDNS 编译必需）
 # 这里体现了作者 sbwml
 rm -rf ../feeds/packages/lang/golang
-git clone --depth=1 https://github.com/sbwml/packages_lang_golang -b 24.x ../feeds/packages/lang/golang
+git clone --depth=1 https://github.com/sbwml/packages_lang_golang -b 26.x ../feeds/packages/lang/golang
 
 # 2. 强力清理 ImmortalWrt 自带的旧版插件索引，防止冲突
 find ../feeds/ -name "*v2ray-geodata*" | xargs rm -rf
