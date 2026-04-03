@@ -90,6 +90,13 @@ UPDATE_PACKAGE "gecoosac" "lwb1978/openwrt-gecoosac" "main"
 rm -rf ../feeds/packages/lang/golang
 git clone --depth=1 https://github.com/sbwml/packages_lang_golang -b 26.x ../feeds/packages/lang/golang
 
+# 2. 核心：强制刷新 feeds 链接
+# 只有执行了 install -f，/staging_dir 里的工具链才会指向新克隆的 26.x
+pushd ..
+./scripts/feeds update lang
+./scripts/feeds install -af golang
+popd
+
 # 2. 强力清理 ImmortalWrt 自带的旧版插件索引，防止冲突
 find ../feeds/ -name "*v2ray-geodata*" | xargs rm -rf
 find ../feeds/ -name "*mosdns*" | xargs rm -rf
@@ -99,11 +106,11 @@ rm -rf v2ray-geodata mosdns
 git clone --depth=1 https://github.com/sbwml/v2ray-geodata v2ray-geodata
 git clone --depth=1 -b v5 https://github.com/sbwml/luci-app-mosdns mosdns
 
-# 4. 强制刷新索引（解决 v2ray-geoip 不存在的问题）
-cd ..
+# 4. 强制安装插件到 feeds
+pushd ..
 ./scripts/feeds install -f v2ray-geodata
 ./scripts/feeds install -f mosdns
-cd package/
+popd
 #UPDATE_PACKAGE "mosdns" "sbwml/luci-app-mosdns" "v5" "" "v2dat"
 #UPDATE_PACKAGE "v2ray-geodata" "sbwml/v2ray-geodata" "master"
 # 修正：恢复多组件提取逻辑
