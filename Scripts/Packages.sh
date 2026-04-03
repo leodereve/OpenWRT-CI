@@ -85,28 +85,26 @@ UPDATE_PACKAGE "gecoosac" "lwb1978/openwrt-gecoosac" "main"
 # 修正：恢复 v2dat 提取，解决 v2ray-geoip 缺失问题
 # --- 2025年 MosDNS v5 适配部分（体现作者 sbwml） ---
 
-# 1. 替换 Golang 为 24.x（MosDNS 编译必需）
-# 这里体现了作者 sbwml
+# --- 1. Golang 替换 (保持 26.x) ---
 rm -rf ../feeds/packages/lang/golang
 git clone --depth=1 https://github.com/sbwml/packages_lang_golang -b 26.x ../feeds/packages/lang/golang
 
-# 2. 核心：强制刷新 feeds 链接
-# 只有执行了 install -f，/staging_dir 里的工具链才会指向新克隆的 26.x
+# 强制刷新 Go 工具链
 pushd ..
 ./scripts/feeds update lang
 ./scripts/feeds install -af golang
 popd
 
-# 2. 强力清理 ImmortalWrt 自带的旧版插件索引，防止冲突
+# --- 2. 插件清理 (先彻底清理旧残留) ---
 find ../feeds/ -name "*v2ray-geodata*" | xargs rm -rf
 find ../feeds/ -name "*mosdns*" | xargs rm -rf
+# 也要清理当前 package 目录下的同名文件夹，防止 git clone 失败
+rm -rf v2ray-geodata mosdns 
 
-# 3. 克隆插件源码（URL中明确体现作者 sbwml）
-rm -rf v2ray-geodata mosdns
+# --- 3. 克隆并安装新插件 ---
 git clone --depth=1 https://github.com/sbwml/v2ray-geodata v2ray-geodata
 git clone --depth=1 -b v5 https://github.com/sbwml/luci-app-mosdns mosdns
 
-# 4. 强制安装插件到 feeds
 pushd ..
 ./scripts/feeds install -f v2ray-geodata
 ./scripts/feeds install -f mosdns
