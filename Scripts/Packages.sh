@@ -123,6 +123,8 @@ UPDATE_PACKAGE "quickfile" "sbwml/luci-app-quickfile" "main"
 # 修正：恢复 wolplus 等依赖提取
 UPDATE_PACKAGE "viking" "VIKINGYFY/packages" "main" "" "luci-app-timewol luci-app-wolplus"
 UPDATE_PACKAGE "vnt" "lmq8267/luci-app-vnt" "main"
+# --- OpenAppFilter 应用过滤插件 ---
+UPDATE_PACKAGE "luci-app-oaf" "destan19/OpenAppFilter" "master" "" "appfilter kmod-oaf"
 
 # =========================================================
 # 3. 更新版本函数 (针对 sing-box)
