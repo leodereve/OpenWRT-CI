@@ -242,4 +242,20 @@ EOF
 find ./package/ -wholename "*/ath11k-firmware/Makefile" | xargs sed -i 's/PKG_HASH:=.*/PKG_HASH:=skip/g' 2>/dev/null
 find ./package/ -wholename "*/usteer/Makefile" | xargs sed -i 's/PKG_MIRROR_HASH:=.*/PKG_MIRROR_HASH:=skip/g' 2>/dev/null
 
+# =========================================================
+# X. OpenAppFilter (应用过滤) 专项配置与 Docker 兼容
+# =========================================================
+# 1. 强制勾选 OpenAppFilter 及其所有组件
+echo "CONFIG_PACKAGE_luci-app-oaf=y" >> ./.config
+echo "CONFIG_PACKAGE_appfilter=y" >> ./.config
+echo "CONFIG_PACKAGE_kmod-oaf=y" >> ./.config
+echo "CONFIG_PACKAGE_luci-i18n-oaf-zh-cn=y" >> ./.config
+
+# 2. 【核心修复】解除 Docker 运行时的内核版本不一致限制
+# 你的固件是在 Docker 中运行，如果编译出的内核版本号与宿主机不完全一致，
+# 强行勾选会导致系统拒绝加载 kmod-oaf 驱动。这两行用于关闭内核模块版本检查。
+echo "CONFIG_KERNEL_OPROFILE=y" >> ./.config
+sed -i 's/# CONFIG_MODVERSIONS is not set/CONFIG_MODVERSIONS=y/g' ./.config
+
+
 echo "Settings.sh 优化完成."
