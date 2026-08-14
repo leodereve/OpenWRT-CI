@@ -254,8 +254,8 @@ echo "CONFIG_PACKAGE_luci-i18n-oaf-zh-cn=y" >> ./.config
 # 2. 【核心修复】解除 Docker 运行时的内核版本不一致限制
 # 你的固件是在 Docker 中运行，如果编译出的内核版本号与宿主机不完全一致，
 # 强行勾选会导致系统拒绝加载 kmod-oaf 驱动。这两行用于关闭内核模块版本检查。
-echo "CONFIG_KERNEL_OPROFILE=y" >> ./.config
-sed -i 's/# CONFIG_MODVERSIONS is not set/CONFIG_MODVERSIONS=y/g' ./.config
+# echo "CONFIG_KERNEL_OPROFILE=y" >> ./.config
+# sed -i 's/# CONFIG_MODVERSIONS is not set/CONFIG_MODVERSIONS=y/g' ./.config
 
 
 echo "Settings.sh 优化完成."
