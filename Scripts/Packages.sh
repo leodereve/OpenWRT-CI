@@ -124,7 +124,8 @@ UPDATE_PACKAGE "quickfile" "sbwml/luci-app-quickfile" "main"
 UPDATE_PACKAGE "viking" "VIKINGYFY/packages" "main" "" "luci-app-timewol luci-app-wolplus"
 UPDATE_PACKAGE "vnt" "lmq8267/luci-app-vnt" "main"
 # --- OpenAppFilter 应用过滤插件 ---
-UPDATE_PACKAGE "luci-app-oaf" "destan19/OpenAppFilter" "master" "" "appfilter kmod-oaf"
+# 虽然编译通过，但是docker下无效
+# UPDATE_PACKAGE "luci-app-oaf" "destan19/OpenAppFilter" "master" "" "appfilter kmod-oaf"
 
 # =========================================================
 # 3. 更新版本函数 (针对 sing-box)
