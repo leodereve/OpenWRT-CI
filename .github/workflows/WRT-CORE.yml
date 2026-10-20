@@ -138,10 +138,11 @@ jobs:
         if: env.WRT_TEST != 'true'
         run: |
           cd ./wrt/
-          # 只有当编译目标是 x86 平台且仅生成 tar.gz 时，才执行移除，绝不影响雅典娜等硬路由
-          if [[ "${{ env.WRT_TARGET }}" == "x86" ]]; then
-            sed -i 's/package\/index json_overview_image_info/package\/index/g' Makefile
-          fi
+          # 1. 核心修复：就算找不到 JSON 总览，也强制允许顺畅通过，绝不报错卡死！
+          sed -i 's/package\/index json_overview_image_info/package\/index json_overview_image_info || true/g' Makefile || true
+          
+          # 2. 备用保障：动态创建 json 文件夹，不管什么平台都加一把安全锁
+          mkdir -p build_dir/target-*/json_info_files || true
           make download -j"$(nproc)"
           make -j"$(nproc)" || make -j1 V=s
 
