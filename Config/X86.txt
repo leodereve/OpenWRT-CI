@@ -23,9 +23,13 @@ CONFIG_PACKAGE_luci-base=y
 CONFIG_PACKAGE_luci-compat=y
 
 # --- 1. Nikki (代理) ---
-CONFIG_PACKAGE_luci-app-nikki=y
-CONFIG_PACKAGE_nikki=y
-CONFIG_PACKAGE_ca-bundle=y
+#CONFIG_PACKAGE_luci-app-nikki=y
+#CONFIG_PACKAGE_nikki=y
+#CONFIG_PACKAGE_ca-bundle=y
+
+# --- 1. HomeProxy (更适合 Docker 旁路由的轻量代理) ---
+CONFIG_PACKAGE_luci-app-homeproxy=y
+
 
 # --- 2. WoL Plus (网络唤醒) ---
 CONFIG_PACKAGE_luci-app-wolplus=y
