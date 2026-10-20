@@ -155,3 +155,52 @@ CONFIG_PACKAGE_kmod-veth=y
 # 建议保留全功能 IP 命令，方便调试旁路由路由表
 CONFIG_PACKAGE_ip-full=y
 
+
+# =========================================================
+# 这是后面补充的，有问题就全部删除到最后
+# 5. 补丁：显式禁用被出厂配置强行勾回的黑手包 (解决234个包堆积问题)
+# =========================================================
+CONFIG_PACKAGE_automount=n
+CONFIG_PACKAGE_block-mount=n
+CONFIG_PACKAGE_appfilter=n
+CONFIG_PACKAGE_luci-app-oaf=n
+CONFIG_PACKAGE_kmod-oaf=n
+
+# --- 强制物理磁盘工具与文件系统不打包 ---
+CONFIG_PACKAGE_fdisk=n
+CONFIG_PACKAGE_blkid=n
+CONFIG_PACKAGE_e2fsprogs=n
+CONFIG_PACKAGE_partx-utils=n
+CONFIG_PACKAGE_ntfs3-mount=n
+CONFIG_PACKAGE_kmod-fs-exfat=n
+CONFIG_PACKAGE_kmod-fs-ext4=n
+CONFIG_PACKAGE_kmod-fs-f2fs=n
+CONFIG_PACKAGE_kmod-fs-ntfs3=n
+CONFIG_PACKAGE_kmod-fs-vfat=n
+CONFIG_PACKAGE_kmod-scsi-core=n
+
+# --- 强制物理 USB 核心与网卡驱动不打包 ---
+CONFIG_PACKAGE_usbutils=n
+CONFIG_PACKAGE_usbids=n
+CONFIG_PACKAGE_libusb-1.0=n
+CONFIG_PACKAGE_kmod-usb-common=n
+CONFIG_PACKAGE_kmod-usb-core=n
+CONFIG_PACKAGE_kmod-usb-hid=n
+CONFIG_PACKAGE_kmod-usb-net=n
+CONFIG_PACKAGE_kmod-usb-net-asix=n
+CONFIG_PACKAGE_kmod-usb-net-asix-ax88179=n
+CONFIG_PACKAGE_kmod-usb-net-rtl8150=n
+CONFIG_PACKAGE_kmod-usb-storage=n
+CONFIG_PACKAGE_kmod-usb-storage-extras=n
+CONFIG_PACKAGE_kmod-usb-storage-uas=n
+CONFIG_PACKAGE_kmod-hid=n
+CONFIG_PACKAGE_kmod-hid-generic=n
+CONFIG_PACKAGE_kmod-input-core=n
+CONFIG_PACKAGE_kmod-input-evdev=n
+
+# --- 强制不打包多余网络协议 ---
+CONFIG_PACKAGE_luci-proto-ppp=n
+CONFIG_PACKAGE_kmod-wireguard=n
+CONFIG_PACKAGE_openssh-sftp-server=n
+
+
